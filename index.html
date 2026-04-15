@@ -1,0 +1,1703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nerovion — Real-Time Emotional Intelligence for Neurodivergent Professionals</title>
+  <meta name="description" content="Nerovion translates unspoken communication cues into real-time insights — built for neurodivergent professionals who deserve tools that actually work." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --viola: #A72D91;
+      --viola-light: #C44DB0;
+      --viola-dark: #7A1F6A;
+      --orange: #ED7D1B;
+      --orange-light: #F59A45;
+      --deep: #130D22;
+      --deep-mid: #1E1430;
+      --deep-surface: #261A3A;
+      --deep-border: #3A2858;
+      --text-primary: #F0EAF8;
+      --text-secondary: #B8A8D0;
+      --text-muted: #7A6A94;
+      --white: #FFFFFF;
+      --font-display: 'Cormorant Garamond', serif;
+      --font-body: 'DM Sans', sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--deep);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      font-weight: 300;
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    /* GRAIN OVERLAY */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 1000;
+      opacity: 0.35;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 900;
+      padding: 24px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: background 0.4s, backdrop-filter 0.4s;
+    }
+    nav.scrolled {
+      background: rgba(19, 13, 34, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--deep-border);
+    }
+    .nav-logo {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--white);
+      text-decoration: none;
+    }
+    .nav-logo span { color: var(--viola-light); }
+    .nav-cta {
+      background: transparent;
+      border: 1px solid var(--viola);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      font-size: 0.8rem;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 10px 24px;
+      cursor: pointer;
+      transition: all 0.25s;
+      text-decoration: none;
+    }
+    .nav-cta:hover {
+      background: var(--viola);
+      border-color: var(--viola);
+      color: var(--white);
+    }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: center;
+      padding: 120px 48px 80px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Radial glow */
+    .hero::after {
+      content: '';
+      position: absolute;
+      top: -200px; right: -200px;
+      width: 700px; height: 700px;
+      background: radial-gradient(circle, rgba(167,45,145,0.18) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-left {
+      max-width: 620px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--orange);
+      margin-bottom: 32px;
+      opacity: 0;
+      animation: fadeUp 0.8s ease 0.1s forwards;
+    }
+    .hero-eyebrow::before {
+      content: '';
+      display: block;
+      width: 32px; height: 1px;
+      background: var(--orange);
+    }
+
+    .hero-headline {
+      font-family: var(--font-display);
+      font-size: clamp(3.2rem, 5.5vw, 5.2rem);
+      font-weight: 300;
+      line-height: 1.1;
+      letter-spacing: -0.01em;
+      color: var(--white);
+      margin-bottom: 12px;
+      opacity: 0;
+      animation: fadeUp 0.9s ease 0.25s forwards;
+    }
+    .hero-headline em {
+      font-style: italic;
+      color: var(--viola-light);
+    }
+
+    .hero-founder-quote {
+      font-family: var(--font-display);
+      font-size: clamp(1.15rem, 1.8vw, 1.45rem);
+      font-weight: 300;
+      font-style: italic;
+      color: var(--text-secondary);
+      line-height: 1.65;
+      margin: 36px 0 48px;
+      padding-left: 24px;
+      border-left: 2px solid var(--viola);
+      opacity: 0;
+      animation: fadeUp 0.9s ease 0.45s forwards;
+    }
+    .hero-founder-quote cite {
+      display: block;
+      font-style: normal;
+      font-family: var(--font-body);
+      font-size: 0.78rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--orange);
+      margin-top: 16px;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+      opacity: 0;
+      animation: fadeUp 0.9s ease 0.6s forwards;
+    }
+
+    .btn-primary {
+      background: var(--viola);
+      color: var(--white);
+      font-family: var(--font-body);
+      font-size: 0.82rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 16px 36px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.25s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn-primary:hover {
+      background: var(--viola-light);
+      transform: translateY(-2px);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: var(--font-body);
+      font-size: 0.82rem;
+      font-weight: 400;
+      letter-spacing: 0.06em;
+      padding: 16px 0;
+      border: none;
+      cursor: pointer;
+      transition: color 0.2s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-ghost:hover { color: var(--white); }
+    .btn-ghost svg { transition: transform 0.2s; }
+    .btn-ghost:hover svg { transform: translateX(4px); }
+
+    /* Hero right: abstract visual */
+    .hero-right {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      opacity: 0;
+      animation: fadeIn 1.2s ease 0.7s forwards;
+    }
+
+    .signal-orb {
+      position: relative;
+      width: 420px;
+      height: 420px;
+    }
+    .orb-ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .orb-ring-1 {
+      width: 420px; height: 420px;
+      border-color: rgba(167,45,145,0.12);
+      animation: pulse 4s ease-in-out infinite;
+    }
+    .orb-ring-2 {
+      width: 320px; height: 320px;
+      border-color: rgba(167,45,145,0.2);
+      animation: pulse 4s ease-in-out 0.6s infinite;
+    }
+    .orb-ring-3 {
+      width: 220px; height: 220px;
+      border-color: rgba(167,45,145,0.35);
+      animation: pulse 4s ease-in-out 1.2s infinite;
+    }
+    .orb-core {
+      position: absolute;
+      width: 120px; height: 120px;
+      border-radius: 50%;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(circle, var(--viola) 0%, var(--viola-dark) 60%, transparent 100%);
+      box-shadow: 0 0 60px rgba(167,45,145,0.5), 0 0 120px rgba(167,45,145,0.2);
+      animation: glow 4s ease-in-out infinite;
+    }
+
+    /* Floating cue chips */
+    .cue-chip {
+      position: absolute;
+      background: rgba(38, 26, 58, 0.9);
+      border: 1px solid var(--deep-border);
+      backdrop-filter: blur(8px);
+      padding: 10px 16px;
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      animation: floatChip 6s ease-in-out infinite;
+    }
+    .cue-chip .dot {
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--orange);
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    .cue-chip.active { color: var(--white); border-color: var(--viola); }
+    .cue-chip.active .dot { background: var(--viola-light); }
+
+    .chip-1 { top: 8%; left: -10%; animation-delay: 0s; }
+    .chip-2 { top: 28%; right: -8%; animation-delay: 1.5s; }
+    .chip-3 { bottom: 30%; left: -14%; animation-delay: 0.8s; }
+    .chip-4 { bottom: 10%; right: -4%; animation-delay: 2.2s; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; transform: translate(-50%, -50%) scale(1); }
+      50% { opacity: 1; transform: translate(-50%, -50%) scale(1.03); }
+    }
+    @keyframes glow {
+      0%, 100% { box-shadow: 0 0 60px rgba(167,45,145,0.4), 0 0 120px rgba(167,45,145,0.15); }
+      50% { box-shadow: 0 0 80px rgba(167,45,145,0.7), 0 0 160px rgba(167,45,145,0.3); }
+    }
+    @keyframes floatChip {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(28px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    /* ── SURVEY STRIP ── */
+    .survey-strip {
+      padding: 56px 48px;
+      background: var(--deep-surface);
+      border-bottom: 1px solid var(--deep-border);
+    }
+    .survey-strip-header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .survey-strip-header .eyebrow {
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--orange);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+    .survey-strip-header .eyebrow::before,
+    .survey-strip-header .eyebrow::after {
+      content: '';
+      display: block;
+      width: 32px; height: 1px;
+      background: var(--orange);
+      opacity: 0.5;
+    }
+    .survey-strip-header h3 {
+      font-family: var(--font-display);
+      font-size: clamp(1.4rem, 2.5vw, 1.9rem);
+      font-weight: 300;
+      color: var(--white);
+      line-height: 1.3;
+    }
+    .survey-strip-header h3 em {
+      font-style: italic;
+      color: var(--viola-light);
+    }
+    .survey-strip-header p {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      margin-top: 10px;
+      letter-spacing: 0.02em;
+    }
+    .survey-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    .survey-card {
+      background: var(--deep-mid);
+      border: 1px solid var(--deep-border);
+      padding: 40px 40px 36px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s;
+    }
+    .survey-card:hover { border-color: var(--viola); }
+    .survey-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .survey-card.b2c::before { background: var(--viola); }
+    .survey-card.b2b::before { background: var(--orange); }
+    .survey-card-label {
+      font-size: 0.65rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .survey-card.b2c .survey-card-label { color: var(--viola-light); }
+    .survey-card.b2b .survey-card-label { color: var(--orange); }
+    .survey-card-label::before {
+      content: '';
+      display: block;
+      width: 20px; height: 1px;
+    }
+    .survey-card.b2c .survey-card-label::before { background: var(--viola-light); }
+    .survey-card.b2b .survey-card-label::before { background: var(--orange); }
+    .survey-card h4 {
+      font-family: var(--font-display);
+      font-size: 1.45rem;
+      font-weight: 400;
+      color: var(--white);
+      line-height: 1.3;
+      margin-bottom: 12px;
+    }
+    .survey-card p {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.75;
+      margin-bottom: 28px;
+    }
+    .btn-survey {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--font-body);
+      font-size: 0.78rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 13px 28px;
+      text-decoration: none;
+      transition: all 0.25s;
+      border: 1px solid;
+    }
+    .btn-survey.b2c {
+      background: transparent;
+      border-color: var(--viola);
+      color: var(--viola-light);
+    }
+    .btn-survey.b2c:hover {
+      background: var(--viola);
+      color: var(--white);
+    }
+    .btn-survey.b2b {
+      background: transparent;
+      border-color: var(--orange);
+      color: var(--orange-light);
+    }
+    .btn-survey.b2b:hover {
+      background: var(--orange);
+      color: var(--white);
+    }
+    .btn-survey svg { transition: transform 0.2s; }
+    .btn-survey:hover svg { transform: translateX(4px); }
+    .survey-card .time-badge {
+      position: absolute;
+      top: 20px; right: 20px;
+      font-size: 0.62rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      background: var(--deep);
+      border: 1px solid var(--deep-border);
+      padding: 4px 10px;
+    }
+
+    /* Survey reminder (inline, compact) */
+    .survey-reminder {
+      margin-top: 56px;
+      border: 1px solid var(--deep-border);
+      background: var(--deep-mid);
+      padding: 32px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+    .survey-reminder-text { flex: 1; min-width: 240px; }
+    .survey-reminder-text strong {
+      display: block;
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 400;
+      color: var(--white);
+      margin-bottom: 6px;
+    }
+    .survey-reminder-text span {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+    .survey-reminder-btns {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* ── TRUST BAR ── */
+    .trust-bar {
+      border-top: 1px solid var(--deep-border);
+      border-bottom: 1px solid var(--deep-border);
+      padding: 28px 48px;
+      display: flex;
+      align-items: center;
+      gap: 48px;
+      overflow: hidden;
+    }
+    .trust-label {
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .trust-items {
+      display: flex;
+      gap: 48px;
+      flex-wrap: wrap;
+    }
+    .trust-item {
+      font-size: 0.78rem;
+      font-weight: 400;
+      color: var(--text-muted);
+      letter-spacing: 0.04em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .trust-item svg { color: var(--viola); flex-shrink: 0; }
+
+    /* ── SECTION BASE ── */
+    section { padding: 120px 48px; }
+    .section-eyebrow {
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--orange);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .section-eyebrow::before {
+      content: '';
+      display: block;
+      width: 24px; height: 1px;
+      background: var(--orange);
+    }
+    h2.section-title {
+      font-family: var(--font-display);
+      font-size: clamp(2.4rem, 4vw, 3.6rem);
+      font-weight: 300;
+      line-height: 1.15;
+      color: var(--white);
+      margin-bottom: 24px;
+    }
+    h2.section-title em { font-style: italic; color: var(--viola-light); }
+    .section-body {
+      font-size: 1.02rem;
+      color: var(--text-secondary);
+      max-width: 540px;
+      line-height: 1.8;
+    }
+
+    /* ── WHO WE SERVE ── */
+    .serve-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      margin-top: 72px;
+    }
+    .serve-card {
+      background: var(--deep-surface);
+      padding: 48px 40px;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.3s;
+    }
+    .serve-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--viola);
+      transform: scaleX(0);
+      transition: transform 0.4s ease;
+      transform-origin: left;
+    }
+    .serve-card:hover::before { transform: scaleX(1); }
+    .serve-card:hover { background: rgba(38, 26, 58, 0.9); }
+    .serve-number {
+      font-family: var(--font-display);
+      font-size: 4rem;
+      font-weight: 300;
+      color: rgba(167,45,145,0.15);
+      line-height: 1;
+      margin-bottom: 24px;
+      display: block;
+    }
+    .serve-card h3 {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 400;
+      color: var(--white);
+      margin-bottom: 16px;
+      line-height: 1.3;
+    }
+    .serve-card p {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.75;
+    }
+    .serve-card .tag {
+      display: inline-block;
+      margin-top: 24px;
+      font-size: 0.68rem;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--orange);
+      border: 1px solid rgba(237,125,27,0.3);
+      padding: 5px 12px;
+    }
+
+    /* ── HOW IT WORKS ── */
+    .how-inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 96px;
+      align-items: start;
+      margin-top: 72px;
+    }
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .step {
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      gap: 24px;
+      padding: 36px 0;
+      border-bottom: 1px solid var(--deep-border);
+      position: relative;
+    }
+    .step:last-child { border-bottom: none; }
+    .step-num {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--viola);
+      padding-top: 4px;
+    }
+    .step h4 {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 400;
+      color: var(--white);
+      margin-bottom: 8px;
+    }
+    .step p {
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+      line-height: 1.75;
+    }
+
+    /* Screen mockup */
+    .screen-mockup {
+      position: sticky;
+      top: 120px;
+      background: var(--deep-surface);
+      border: 1px solid var(--deep-border);
+      padding: 0;
+      overflow: hidden;
+    }
+    .mockup-bar {
+      background: var(--deep-mid);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--deep-border);
+    }
+    .mockup-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+    }
+    .mockup-dot:nth-child(1) { background: #FF5F57; }
+    .mockup-dot:nth-child(2) { background: #FFBD2E; }
+    .mockup-dot:nth-child(3) { background: #28CA41; }
+    .mockup-content { padding: 32px; }
+    .mockup-call-ui {
+      background: var(--deep);
+      border-radius: 2px;
+      padding: 24px;
+      margin-bottom: 16px;
+      position: relative;
+    }
+    .video-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .video-tile {
+      background: var(--deep-mid);
+      aspect-ratio: 16/9;
+      border: 1px solid var(--deep-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .video-tile-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--viola-dark);
+      opacity: 0.6;
+    }
+    .video-tile.active-speaker { border-color: var(--viola); }
+    .insight-overlay {
+      background: rgba(19, 13, 34, 0.94);
+      border: 1px solid var(--viola);
+      border-left: 3px solid var(--viola);
+      padding: 12px 16px;
+      margin-top: 12px;
+    }
+    .insight-label {
+      font-size: 0.6rem;
+      font-weight: 500;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--viola-light);
+      margin-bottom: 6px;
+    }
+    .insight-text {
+      font-size: 0.82rem;
+      color: var(--text-primary);
+      line-height: 1.5;
+    }
+    .insight-confidence {
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .conf-bar {
+      flex: 1;
+      height: 2px;
+      background: var(--deep-border);
+      position: relative;
+    }
+    .conf-fill {
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 82%;
+      background: linear-gradient(90deg, var(--viola), var(--orange));
+    }
+    .conf-label {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+    }
+
+    /* Avatar tiles */
+    .avatar-wrap {
+      position: relative;
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column;
+    }
+    .avatar-svg {
+      width: 64px; height: 64px;
+    }
+    .avatar-name {
+      position: absolute;
+      bottom: 8px; left: 10px;
+      font-size: 0.65rem;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      color: var(--text-secondary);
+      background: rgba(19,13,34,0.7);
+      padding: 2px 8px;
+    }
+    .speaking-indicator {
+      position: absolute;
+      bottom: 8px; right: 10px;
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      height: 16px;
+    }
+    .speaking-indicator span {
+      display: block;
+      width: 3px;
+      background: var(--viola-light);
+      border-radius: 2px;
+      animation: soundwave 0.8s ease-in-out infinite;
+    }
+    .speaking-indicator span:nth-child(1) { height: 6px; animation-delay: 0s; }
+    .speaking-indicator span:nth-child(2) { height: 12px; animation-delay: 0.15s; }
+    .speaking-indicator span:nth-child(3) { height: 8px; animation-delay: 0.3s; }
+    @keyframes soundwave {
+      0%, 100% { transform: scaleY(0.5); opacity: 0.6; }
+      50% { transform: scaleY(1.4); opacity: 1; }
+    }
+
+    /* Live dot pulse */
+    .live-dot {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--orange);
+    }
+    .live-dot::before {
+      content: '';
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--orange);
+      animation: livepulse 1.4s ease-in-out infinite;
+    }
+    @keyframes livepulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.7); }
+    }
+
+    /* Status tags */
+    .status-tag {
+      background: var(--deep);
+      border: 1px solid var(--deep-border);
+      padding: 8px 12px;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      transition: all 0.4s ease;
+    }
+    .status-tag.action {
+      border-color: var(--viola);
+      color: var(--viola-light);
+    }
+
+    /* Insight text fade transition */
+    .insight-overlay {
+      transition: opacity 0.35s ease;
+    }
+    .insight-overlay.fading { opacity: 0; }
+
+    /* ── FOUNDER ── */
+    .founder-section {
+      background: var(--deep-mid);
+      border-top: 1px solid var(--deep-border);
+      border-bottom: 1px solid var(--deep-border);
+    }
+    .founder-inner {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 96px;
+      align-items: center;
+    }
+    .founder-visual {
+      position: relative;
+    }
+    .founder-frame {
+      width: 100%;
+      aspect-ratio: 3/4;
+      background: var(--deep-surface);
+      border: 1px solid var(--deep-border);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .founder-initials {
+      font-family: var(--font-display);
+      font-size: 6rem;
+      font-weight: 300;
+      color: rgba(167,45,145,0.2);
+      letter-spacing: -0.02em;
+    }
+    .founder-frame::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 15%;
+      background: linear-gradient(transparent, rgba(30,20,48,0.4));
+    }
+    .founder-accent {
+      position: absolute;
+      bottom: -16px; right: -16px;
+      width: 80px; height: 80px;
+      background: var(--viola);
+      opacity: 0.15;
+    }
+    .founder-name-plate {
+      margin-top: 20px;
+    }
+    .founder-name {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      font-weight: 400;
+      color: var(--white);
+    }
+    .founder-title {
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--orange);
+      margin-top: 4px;
+    }
+    .founder-content blockquote {
+      font-family: var(--font-display);
+      font-size: clamp(1.4rem, 2.5vw, 2rem);
+      font-weight: 300;
+      font-style: italic;
+      color: var(--text-primary);
+      line-height: 1.6;
+      margin-bottom: 36px;
+    }
+    .founder-content blockquote strong {
+      font-style: normal;
+      font-weight: 600;
+      color: var(--viola-light);
+    }
+    .founder-body {
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      line-height: 1.85;
+      max-width: 560px;
+    }
+    .founder-body p + p { margin-top: 20px; }
+
+    /* ── FOR PROFESSIONALS ── */
+    .professionals-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2px;
+      margin-top: 72px;
+    }
+    .pro-card {
+      background: var(--deep-surface);
+      padding: 56px 48px;
+      position: relative;
+      overflow: hidden;
+    }
+    .pro-card::after {
+      content: '';
+      position: absolute;
+      bottom: -60px; right: -60px;
+      width: 180px; height: 180px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(167,45,145,0.08), transparent 70%);
+    }
+    .pro-icon {
+      width: 48px; height: 48px;
+      border: 1px solid var(--viola);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 32px;
+      color: var(--viola-light);
+    }
+    .pro-card h3 {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      font-weight: 400;
+      color: var(--white);
+      margin-bottom: 16px;
+    }
+    .pro-card p {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.8;
+      margin-bottom: 28px;
+    }
+    .pro-card ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .pro-card ul li {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .pro-card ul li::before {
+      content: '';
+      display: block;
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      background: var(--viola);
+      margin-top: 8px;
+      flex-shrink: 0;
+    }
+
+    /* ── EMAIL CAPTURE ── */
+    .capture-section {
+      background: var(--deep-mid);
+      border-top: 1px solid var(--deep-border);
+    }
+    .capture-inner {
+      max-width: 700px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .capture-inner h2 {
+      font-family: var(--font-display);
+      font-size: clamp(2.2rem, 4vw, 3.2rem);
+      font-weight: 300;
+      color: var(--white);
+      margin-bottom: 20px;
+      line-height: 1.2;
+    }
+    .capture-inner h2 em { font-style: italic; color: var(--viola-light); }
+    .capture-inner p {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      margin-bottom: 48px;
+      line-height: 1.7;
+    }
+
+    .capture-tabs {
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      margin-bottom: 40px;
+      border: 1px solid var(--deep-border);
+      display: inline-flex;
+    }
+    .capture-tab {
+      font-family: var(--font-body);
+      font-size: 0.75rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 12px 28px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: transparent;
+      color: var(--text-muted);
+    }
+    .capture-tab.active {
+      background: var(--viola);
+      color: var(--white);
+    }
+
+    .capture-form {
+      display: flex;
+      gap: 0;
+    }
+    .capture-form input[type="email"],
+    .capture-form input[type="text"] {
+      flex: 1;
+      background: var(--deep-surface);
+      border: 1px solid var(--deep-border);
+      border-right: none;
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      padding: 16px 20px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .capture-form input:focus { border-color: var(--viola); }
+    .capture-form input::placeholder { color: var(--text-muted); }
+    .capture-form button {
+      background: var(--viola);
+      color: var(--white);
+      font-family: var(--font-body);
+      font-size: 0.8rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 16px 32px;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+    .capture-form button:hover { background: var(--viola-light); }
+
+    .form-wrapper { display: none; }
+    .form-wrapper.active { display: block; }
+
+    .capture-note {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 16px;
+      letter-spacing: 0.04em;
+    }
+
+    .success-msg {
+      display: none;
+      padding: 24px;
+      border: 1px solid var(--viola);
+      background: rgba(167,45,145,0.08);
+      color: var(--text-primary);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      padding: 48px;
+      border-top: 1px solid var(--deep-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 24px;
+    }
+    .footer-logo {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: var(--white);
+      letter-spacing: 0.04em;
+    }
+    .footer-logo span { color: var(--viola-light); }
+    .footer-tagline {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      letter-spacing: 0.06em;
+      margin-top: 4px;
+    }
+    .footer-links {
+      display: flex;
+      gap: 32px;
+    }
+    .footer-links a {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      letter-spacing: 0.06em;
+      transition: color 0.2s;
+    }
+    .footer-links a:hover { color: var(--text-secondary); }
+    .footer-copy {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      width: 100%;
+      text-align: right;
+      padding-top: 24px;
+      border-top: 1px solid var(--deep-border);
+      margin-top: 8px;
+    }
+
+    /* ── SCROLL REVEAL ── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(32px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: none;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 1024px) {
+      .hero { grid-template-columns: 1fr; padding: 140px 32px 80px; }
+      .hero-right { justify-content: flex-start; margin-top: 60px; }
+      .signal-orb { width: 300px; height: 300px; }
+      .orb-ring-1 { width: 300px; height: 300px; }
+      .orb-ring-2 { width: 220px; height: 220px; }
+      .orb-ring-3 { width: 150px; height: 150px; }
+      .serve-grid { grid-template-columns: 1fr; }
+      .how-inner { grid-template-columns: 1fr; }
+      .screen-mockup { position: relative; top: 0; }
+      .founder-inner { grid-template-columns: 1fr; gap: 48px; }
+      .founder-frame { aspect-ratio: 2/1; }
+      .professionals-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      nav { padding: 20px 24px; }
+      section { padding: 80px 24px; }
+      .hero { padding: 120px 24px 60px; }
+      .trust-bar { padding: 24px; flex-direction: column; align-items: flex-start; gap: 20px; }
+      .capture-form { flex-direction: column; }
+      .capture-form input { border-right: 1px solid var(--deep-border); border-bottom: none; }
+      footer { padding: 32px 24px; }
+      .footer-links { flex-wrap: wrap; gap: 16px; }
+      .footer-copy { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav id="nav">
+    <a href="#" class="nav-logo">Nero<span>vion</span></a>
+    <a href="#early-access" class="nav-cta">Request Early Access</a>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero" id="hero">
+    <div class="hero-left">
+      <div class="hero-eyebrow">Emotional Intelligence AI</div>
+      <h1 class="hero-headline">
+        The layer between<br><em>what's said</em><br>and what's meant.
+      </h1>
+      <blockquote class="hero-founder-quote">
+        "I missed every unspoken cue for years. I know exactly what that costs. I built Nerovion because you deserve tools that actually work."
+        <cite>Seth Stapleton &nbsp;·&nbsp; Founder, Nerovion</cite>
+      </blockquote>
+      <div class="hero-actions">
+        <a href="#early-access" class="btn-primary">Join the Waitlist</a>
+        <a href="#how-it-works" class="btn-ghost">
+          See how it works
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+    <div class="hero-right">
+      <div class="signal-orb">
+        <div class="orb-ring orb-ring-1"></div>
+        <div class="orb-ring orb-ring-2"></div>
+        <div class="orb-ring orb-ring-3"></div>
+        <div class="orb-core"></div>
+        <div class="cue-chip chip-1"><span class="dot"></span>Disengagement detected</div>
+        <div class="cue-chip active chip-2"><span class="dot"></span>Frustration signal: moderate</div>
+        <div class="cue-chip chip-3"><span class="dot"></span>Tone shift: concern</div>
+        <div class="cue-chip chip-4 active"><span class="dot"></span>Cue: ready to speak</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SURVEY STRIP -->
+  <div class="survey-strip" id="surveys">
+    <div class="survey-strip-header">
+      <div class="eyebrow">Help Shape Nerovion</div>
+      <h3>Two minutes. Real impact.<br><em>Your voice drives what we build.</em></h3>
+      <p>We are in active development. Tell us about your experience and help us build the tool you actually need.</p>
+    </div>
+    <div class="survey-cards">
+      <div class="survey-card b2c reveal">
+        <span class="time-badge">~2 min</span>
+        <div class="survey-card-label">For Individuals</div>
+        <h4>Neurodivergent Professionals &amp; Those Who Support Them</h4>
+        <p>Share your firsthand experience with unspoken communication in professional settings. Your responses directly shape the product roadmap.</p>
+        <a href="https://survey.nerovion.ai" target="_blank" rel="noopener" class="btn-survey b2c">
+          Take the Individual Survey
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+      </div>
+      <div class="survey-card b2b reveal">
+        <span class="time-badge">~3 min</span>
+        <div class="survey-card-label">For Organizations &amp; Practitioners</div>
+        <h4>Therapists, Coaches &amp; Organizational Leaders</h4>
+        <p>Tell us how you currently support neurodivergent clients or employees -- and where the biggest gaps are. Help us build for the professionals on the front line.</p>
+        <a href="https://survey.b2c.nerovion.ai" target="_blank" rel="noopener" class="btn-survey b2b">
+          Take the Professional Survey
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRUST BAR -->
+  <div class="trust-bar">
+    <span class="trust-label">Built for</span>
+    <div class="trust-items">
+      <span class="trust-item">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><circle cx="7" cy="7" r="7"/></svg>
+        Neurodivergent Professionals
+      </span>
+      <span class="trust-item">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><circle cx="7" cy="7" r="7"/></svg>
+        Therapists &amp; Coaches
+      </span>
+      <span class="trust-item">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><circle cx="7" cy="7" r="7"/></svg>
+        Inclusive Organizations
+      </span>
+      <span class="trust-item">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><circle cx="7" cy="7" r="7"/></svg>
+        Real-Time. Private. On Your Call.
+      </span>
+    </div>
+  </div>
+
+  <!-- WHO WE SERVE -->
+  <section id="who-we-serve">
+    <div class="section-eyebrow">Who We Serve</div>
+    <h2 class="section-title reveal">Three communities.<br><em>One platform.</em></h2>
+    <p class="section-body reveal">Nerovion meets you where you are -- whether you live this challenge, guide others through it, or lead a team that deserves better tools.</p>
+    <div class="serve-grid">
+      <div class="serve-card reveal">
+        <span class="serve-number">01</span>
+        <h3>Neurodivergent Professionals</h3>
+        <p>You are technically excellent. You bring ideas others miss. But the unspoken rules of professional interaction were never explained to you -- because most people never needed them explained. Nerovion translates what others read automatically into clear, real-time guidance you can act on.</p>
+        <span class="tag">Primary User</span>
+      </div>
+      <div class="serve-card reveal">
+        <span class="serve-number">02</span>
+        <h3>Therapists &amp; Coaches</h3>
+        <p>You work hard in sessions to build skills that are supposed to transfer to the real world. The problem is you cannot see what happens between sessions. Nerovion bridges the gap -- giving your clients a tool that supports them live, and giving you data that makes your work more precise.</p>
+        <span class="tag">Trusted Advocate</span>
+      </div>
+      <div class="serve-card reveal">
+        <span class="serve-number">03</span>
+        <h3>Inclusive Organizations</h3>
+        <p>You made the commitment to hire for cognitive diversity. Now make the commitment to support it. Nerovion gives neurodivergent employees the real-world infrastructure to succeed -- protecting your talent investment and demonstrating a measurable commitment to inclusion.</p>
+        <span class="tag">Enterprise Partner</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section id="how-it-works" style="background: var(--deep-mid); border-top: 1px solid var(--deep-border); border-bottom: 1px solid var(--deep-border);">
+    <div class="section-eyebrow">How It Works</div>
+    <h2 class="section-title reveal">Intelligence delivered<br><em>in the moment.</em></h2>
+    <div class="how-inner">
+      <div class="steps">
+        <div class="step reveal">
+          <span class="step-num">01</span>
+          <div>
+            <h4>Connect to Your Call</h4>
+            <p>Nerovion integrates natively with Zoom, Microsoft Teams, and Google Meet. One authorization. No disruption to your existing workflow.</p>
+          </div>
+        </div>
+        <div class="step reveal">
+          <span class="step-num">02</span>
+          <div>
+            <h4>Real-Time Analysis Begins</h4>
+            <p>As your call runs, Nerovion reads facial expressions, body language, tone shifts, and conversational subtext -- across all participants in your session.</p>
+          </div>
+        </div>
+        <div class="step reveal">
+          <span class="step-num">03</span>
+          <div>
+            <h4>Discreet Insights Surface</h4>
+            <p>A private overlay visible only to you delivers clear, actionable interpretations. Not jargon. Not data. Real guidance you can use in real time.</p>
+          </div>
+        </div>
+        <div class="step reveal">
+          <span class="step-num">04</span>
+          <div>
+            <h4>Build Awareness Over Time</h4>
+            <p>Post-session summaries and pattern tracking help you understand recurring dynamics and measure your growth across every interaction.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-mockup reveal">
+        <div class="mockup-bar">
+          <div class="mockup-dot"></div>
+          <div class="mockup-dot"></div>
+          <div class="mockup-dot"></div>
+        </div>
+        <div class="mockup-content">
+          <div class="mockup-call-ui">
+            <div class="video-grid">
+              <!-- Participant A: speaking -->
+              <div class="video-tile active-speaker" id="tile-a">
+                <div class="avatar-wrap">
+                  <svg class="avatar-svg" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="40" cy="28" r="16" fill="rgba(167,45,145,0.55)"/>
+                    <ellipse cx="40" cy="68" rx="22" ry="14" fill="rgba(167,45,145,0.35)"/>
+                  </svg>
+                  <div class="avatar-name">Alex</div>
+                  <div class="speaking-indicator" id="speaking-a">
+                    <span></span><span></span><span></span>
+                  </div>
+                </div>
+              </div>
+              <!-- Participant B: listening -->
+              <div class="video-tile" id="tile-b">
+                <div class="avatar-wrap">
+                  <svg class="avatar-svg" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="40" cy="28" r="16" fill="rgba(100,60,140,0.55)"/>
+                    <ellipse cx="40" cy="68" rx="22" ry="14" fill="rgba(100,60,140,0.35)"/>
+                  </svg>
+                  <div class="avatar-name">Jordan</div>
+                  <div class="speaking-indicator" id="speaking-b" style="display:none">
+                    <span></span><span></span><span></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Animated insight overlay -->
+            <div class="insight-overlay">
+              <div class="insight-label">Nerovion Insight &nbsp;·&nbsp; <span class="live-dot">Live</span></div>
+              <div class="insight-text" id="insight-text">Speaker appears hesitant -- possible uncertainty about the proposal. Consider pausing to invite direct feedback.</div>
+              <div class="insight-confidence">
+                <div class="conf-bar"><div class="conf-fill" id="conf-fill"></div></div>
+                <span class="conf-label" id="conf-label">82% confidence</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:8px; flex-wrap:wrap;" id="status-tags">
+            <div class="status-tag" id="tag-tone">Tone: Uncertain</div>
+            <div class="status-tag" id="tag-engage">Engagement: Moderate</div>
+            <div class="status-tag action" id="tag-action">Action suggested</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOUNDER -->
+  <section class="founder-section" id="founder">
+    <div class="founder-inner reveal">
+      <div class="founder-visual">
+        <div class="founder-frame">
+          <img src="seth.jpeg" alt="Seth Stapleton, Founder of Nerovion" style="width:100%; height:100%; object-fit:cover; object-position: center top; display:block;" />
+        </div>
+        <div class="founder-accent"></div>
+        <div class="founder-name-plate">
+          <div class="founder-name">Seth Stapleton</div>
+          <div class="founder-title">Founder &amp; CEO, Nerovion</div>
+        </div>
+      </div>
+      <div class="founder-content">
+        <div class="section-eyebrow">The Founder</div>
+        <blockquote>
+          "I missed every unspoken cue for years. I know exactly what that costs. I built Nerovion because <strong>you deserve tools that actually work.</strong>"
+        </blockquote>
+        <div class="founder-body">
+          <p>I am not building Nerovion from the outside looking in. I built it because I lived the gap it closes. The miscommunications that cost opportunities. The meetings where I read the room wrong and did not know it until later. The professional moments that should have gone differently.</p>
+          <p>Nerovion is not a clinical tool. It is not a diagnostic. It is the real-time intelligence layer I always needed -- designed for people who are exceptional at their work and deserve to be equally equipped for the human side of it.</p>
+          <p>This is built for you. Because I am you.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOR PROFESSIONALS -->
+  <section id="for-professionals">
+    <div class="section-eyebrow">For Trusted Professionals</div>
+    <h2 class="section-title reveal">The tool your clients<br><em>need you to know about.</em></h2>
+    <p class="section-body reveal">Nerovion is designed to be recommended. We partner with therapists, coaches, and occupational therapists who want to extend their impact beyond the session.</p>
+    <div class="professionals-grid">
+      <div class="pro-card reveal">
+        <div class="pro-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </div>
+        <h3>For Therapists &amp; Coaches</h3>
+        <p>Extend your work beyond the session. Nerovion gives your clients real-world support and gives you the data to make every session sharper.</p>
+        <ul>
+          <li>Practitioner referral portal with client access codes</li>
+          <li>Consent-gated session summaries for clinical use</li>
+          <li>Progress tracking across sessions and time</li>
+          <li>15% recurring revenue share on referred subscriptions</li>
+          <li>Co-branded client onboarding materials</li>
+        </ul>
+      </div>
+      <div class="pro-card reveal">
+        <div class="pro-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="2" y="3" width="20" height="14" rx="2"/>
+            <path d="M8 21h8M12 17v4"/>
+          </svg>
+        </div>
+        <h3>For Organizations</h3>
+        <p>Nerovion turns your neurodiversity commitment into a measurable, operational reality. Deploy at scale without the complexity of custom development.</p>
+        <ul>
+          <li>Enterprise license with admin dashboard</li>
+          <li>SSO and HR system integration</li>
+          <li>Anonymized team-level communication analytics</li>
+          <li>Pilot program option for risk-free evaluation</li>
+          <li>Dedicated implementation and support team</li>
+        </ul>
+      </div>
+    </div>
+    <div class="survey-reminder reveal">
+      <div class="survey-reminder-text">
+        <strong>Haven't taken the survey yet?</strong>
+        <span>Two minutes of your time shapes what we build. Both surveys are open now.</span>
+      </div>
+      <div class="survey-reminder-btns">
+        <a href="https://survey.nerovion.ai" target="_blank" rel="noopener" class="btn-survey b2c">
+          Individual Survey
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+        <a href="https://survey.b2c.nerovion.ai" target="_blank" rel="noopener" class="btn-survey b2b">
+          Professional Survey
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- EMAIL / INVESTOR CAPTURE -->
+  <section class="capture-section" id="early-access">
+    <div class="capture-inner">
+      <div class="section-eyebrow" style="justify-content:center;">Get Early Access</div>
+      <h2>Be first.<br><em>Shape what we build.</em></h2>
+      <p>Nerovion is in active development. Join the waitlist to get early access, influence the product roadmap, and be part of the community that builds this from the ground up.</p>
+
+      <div class="capture-tabs">
+        <button class="capture-tab active" onclick="switchTab('user')">I Want Early Access</button>
+        <button class="capture-tab" onclick="switchTab('investor')">Investor Inquiry</button>
+      </div>
+
+      <div id="form-user" class="form-wrapper active">
+        <div id="success-user" class="success-msg">You are on the list. We will be in touch as we approach launch -- thank you for being part of this early.</div>
+        <form class="capture-form" onsubmit="handleSubmit(event, 'user')">
+          <input type="email" placeholder="Your professional email" required />
+          <button type="submit">Join Waitlist</button>
+        </form>
+        <p class="capture-note">No spam. No marketing blasts. One email when access opens.</p>
+      </div>
+
+      <div id="form-investor" class="form-wrapper">
+        <div id="success-investor" class="success-msg">Thank you for your interest. Seth will follow up personally within 48 hours.</div>
+        <form class="capture-form" onsubmit="handleSubmit(event, 'investor')" style="flex-direction:column; gap:0;">
+          <input type="text" placeholder="Your name and firm" required style="border-right: 1px solid var(--deep-border); border-bottom: none; margin-bottom: 0;" />
+          <div style="display:flex;">
+            <input type="email" placeholder="Your email" required style="flex:1; border-right:none;" />
+            <button type="submit">Send Inquiry</button>
+          </div>
+        </form>
+        <p class="capture-note">All inquiries go directly to the founder.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div>
+      <div class="footer-logo">Nero<span>vion</span></div>
+      <div class="footer-tagline">Real-time emotional intelligence for neurodivergent professionals.</div>
+    </div>
+    <div class="footer-links">
+      <a href="#surveys">Surveys</a>
+      <a href="#who-we-serve">Who We Serve</a>
+      <a href="#how-it-works">How It Works</a>
+      <a href="#founder">Our Story</a>
+      <a href="#early-access">Early Access</a>
+      <a href="mailto:hello@nerovion.ai">Contact</a>
+    </div>
+    <div class="footer-copy">
+      &copy; 2026 Nerovion AI. All rights reserved. &nbsp;&middot;&nbsp; nerovion.ai
+    </div>
+  </footer>
+
+  <script>
+    // Nav scroll effect
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => {
+      nav.classList.toggle('scrolled', window.scrollY > 40);
+    });
+
+    // Scroll reveal
+    const revealEls = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry, i) => {
+        if (entry.isIntersecting) {
+          setTimeout(() => entry.target.classList.add('visible'), i * 80);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12 });
+    revealEls.forEach(el => observer.observe(el));
+
+    // Tab switching
+    function switchTab(tab) {
+      document.querySelectorAll('.capture-tab').forEach((t, i) => {
+        t.classList.toggle('active', (i === 0 && tab === 'user') || (i === 1 && tab === 'investor'));
+      });
+      document.getElementById('form-user').classList.toggle('active', tab === 'user');
+      document.getElementById('form-investor').classList.toggle('active', tab === 'investor');
+    }
+
+    // Form submit (static -- ready for Formspree/Netlify/etc)
+    function handleSubmit(e, type) {
+      e.preventDefault();
+      const form = e.target;
+      const success = document.getElementById('success-' + type);
+      form.style.display = 'none';
+      success.style.display = 'block';
+      // TODO: wire to Formspree, Netlify Forms, or backend endpoint
+      // fetch('/api/waitlist', { method: 'POST', body: new FormData(form) });
+    }
+    // Animated mockup: cycling insights + speaker switching
+    const insights = [
+      {
+        speaker: 'a',
+        text: 'Speaker appears hesitant -- possible uncertainty about the proposal. Consider pausing to invite direct feedback.',
+        conf: 82, confWidth: '82%',
+        tone: 'Tone: Uncertain', engage: 'Engagement: Moderate', action: true
+      },
+      {
+        speaker: 'b',
+        text: 'Listener showing signs of disengagement -- gaze shift and reduced nodding detected. A direct question may re-anchor their attention.',
+        conf: 76, confWidth: '76%',
+        tone: 'Tone: Distracted', engage: 'Engagement: Low', action: true
+      },
+      {
+        speaker: 'a',
+        text: 'Positive signal -- speaker\'s tone has shifted toward confidence. Agreement likely. Good moment to confirm next steps.',
+        conf: 91, confWidth: '91%',
+        tone: 'Tone: Confident', engage: 'Engagement: High', action: false
+      },
+      {
+        speaker: 'b',
+        text: 'Micro-expression detected: concern. Speaker may have an unvoiced objection. Consider opening space for questions before proceeding.',
+        conf: 79, confWidth: '79%',
+        tone: 'Tone: Concerned', engage: 'Engagement: Moderate', action: true
+      },
+    ];
+
+    let insightIndex = 0;
+
+    function cycleInsight() {
+      const overlay = document.querySelector('.insight-overlay');
+      if (!overlay) return;
+
+      overlay.classList.add('fading');
+
+      setTimeout(() => {
+        insightIndex = (insightIndex + 1) % insights.length;
+        const ins = insights[insightIndex];
+
+        // Swap speaker indicators
+        const speakingA = document.getElementById('speaking-a');
+        const speakingB = document.getElementById('speaking-b');
+        const tileA = document.getElementById('tile-a');
+        const tileB = document.getElementById('tile-b');
+
+        if (ins.speaker === 'a') {
+          if (speakingA) speakingA.style.display = 'flex';
+          if (speakingB) speakingB.style.display = 'none';
+          if (tileA) tileA.classList.add('active-speaker');
+          if (tileB) tileB.classList.remove('active-speaker');
+        } else {
+          if (speakingA) speakingA.style.display = 'none';
+          if (speakingB) speakingB.style.display = 'flex';
+          if (tileA) tileA.classList.remove('active-speaker');
+          if (tileB) tileB.classList.add('active-speaker');
+        }
+
+        // Update insight text
+        const textEl = document.getElementById('insight-text');
+        const confFill = document.getElementById('conf-fill');
+        const confLabel = document.getElementById('conf-label');
+        const tagTone = document.getElementById('tag-tone');
+        const tagEngage = document.getElementById('tag-engage');
+        const tagAction = document.getElementById('tag-action');
+
+        if (textEl) textEl.textContent = ins.text;
+        if (confFill) confFill.style.width = ins.confWidth;
+        if (confLabel) confLabel.textContent = ins.conf + '% confidence';
+        if (tagTone) tagTone.textContent = ins.tone;
+        if (tagEngage) tagEngage.textContent = ins.engage;
+        if (tagAction) {
+          tagAction.style.display = ins.action ? 'block' : 'none';
+        }
+
+        overlay.classList.remove('fading');
+      }, 380);
+    }
+
+    setInterval(cycleInsight, 4500);
+
+  </script>
+</body>
+</html>
