@@ -316,8 +316,14 @@
       .nav-mobile-toggle { display: flex; }
       .nav-links.open { display: flex; flex-direction: column; position: fixed; top: 70px; left: 0; right: 0; background: rgba(19,13,34,0.97); padding: 2rem 24px; border-bottom: 1px solid var(--deep-border); gap: 1.5rem; z-index: 899; backdrop-filter: blur(16px); }
       .hero { padding: 100px 24px 64px; }
-      .hero-top { grid-template-columns: 1fr; gap: 40px; }
-      .hero-right { display: none; }
+      .hero-top { grid-template-columns: 1fr; gap: 0; display: flex; flex-direction: column; }
+      .hero-left { display: contents; } /* lets children participate in parent flex order */
+      .hero-right { display: flex; order: 3; width: 100%; justify-content: center; padding-top: 0; animation: none; opacity: 1; margin: 32px 0; }
+      .demo-frame { max-width: 100%; }
+      .hero-actions { order: 4; }
+      .hero-founder-quote { order: 2; margin-bottom: 0; }
+      .hero-eyebrow { order: 1; }
+      .hero-headline { order: 1; }
       .section-wrap { padding: 0 24px; }
       .section-pad { padding: 80px 0; }
       .survey-strip { padding: 64px 24px; }
@@ -430,14 +436,14 @@
         <div class="survey-card-label">Individual</div>
         <h4>I experience this personally</h4>
         <p>You navigate professional conversations where the unspoken matters and the gap costs you. Tell us what you need.</p>
-        <a href="https://seth-merica.github.io/nerovion-site/b2c/" target="_blank" rel="noopener" class="btn-survey b2c">Take the Survey <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        <a href="https://survey.b2c.nerovion.ai" target="_blank" rel="noopener" class="btn-survey b2c">Take the Survey <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
       </div>
       <div class="survey-card b2b reveal">
         <div class="time-badge">2 min</div>
         <div class="survey-card-label">Professional</div>
         <h4>I work with people who do</h4>
         <p>Therapists, coaches, OTs, and vocational specialists: tell us how Nerovion can extend your work beyond the session.</p>
-        <a href="https://seth-merica.github.io/nerovion-site/b2b/" target="_blank" rel="noopener" class="btn-survey b2b">Take the Survey <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        <a href="https://survey.nerovion.ai" target="_blank" rel="noopener" class="btn-survey b2b">Take the Survey <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
       </div>
     </div>
   </div>
@@ -582,8 +588,8 @@
           <span>Two minutes of your time shapes what we build.</span>
         </div>
         <div class="survey-reminder-btns">
-          <a href="https://seth-merica.github.io/nerovion-site/b2c/" target="_blank" rel="noopener" class="btn-survey b2c">Individual Survey <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
-          <a href="https://seth-merica.github.io/nerovion-site/b2b/" target="_blank" rel="noopener" class="btn-survey b2b">Professional Survey <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+          <a href="https://survey.b2c.nerovion.ai" target="_blank" rel="noopener" class="btn-survey b2c">Individual Survey <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+          <a href="https://survey.nerovion.ai" target="_blank" rel="noopener" class="btn-survey b2b">Professional Survey <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
         </div>
       </div>
     </div>
@@ -673,7 +679,7 @@
             <li>Team meetings where the stakes are high</li>
             <li>Any conversation where the unspoken matters</li>
           </ul>
-          <a href="https://seth-merica.github.io/nerovion-site/b2c/" target="_blank" rel="noopener" class="btn-survey b2c">Take the Individual Survey <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+          <a href="https://survey.b2c.nerovion.ai" target="_blank" rel="noopener" class="btn-survey b2c">Take the Individual Survey <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
         </div>
         <div class="pro-card reveal">
           <div class="pro-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
@@ -687,7 +693,7 @@
             <li>Vocational rehabilitation specialists</li>
             <li>Communication specialists</li>
           </ul>
-          <a href="https://seth-merica.github.io/nerovion-site/b2b/" target="_blank" rel="noopener" class="btn-survey b2b">Take the Practitioner Survey <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+          <a href="https://survey.nerovion.ai" target="_blank" rel="noopener" class="btn-survey b2b">Take the Practitioner Survey <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
         </div>
       </div>
     </div>
@@ -845,8 +851,8 @@
             <span>Research inquiries: <a href="mailto:seth@nerovion.ai" style="color:var(--viola-light);">seth@nerovion.ai</a></span>
           </div>
           <div class="survey-reminder-btns">
-            <a href="https://seth-merica.github.io/nerovion-site/b2c/" target="_blank" rel="noopener" class="btn-survey b2c">Individual Survey <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
-            <a href="https://seth-merica.github.io/nerovion-site/b2b/" target="_blank" rel="noopener" class="btn-survey b2b">Professional Survey <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+            <a href="https://survey.b2c.nerovion.ai" target="_blank" rel="noopener" class="btn-survey b2c">Individual Survey <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+            <a href="https://survey.nerovion.ai" target="_blank" rel="noopener" class="btn-survey b2b">Professional Survey <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
           </div>
         </div>
       </div>
