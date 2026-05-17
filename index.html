@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Nerovion — Real-Time Emotional Intelligence for Neurodivergent Professionals</title>
   <meta name="description" content="Nerovion translates unspoken communication cues into real-time insights — built for neurodivergent professionals who deserve tools that actually work." />
+  <link rel="icon" type="image/png" href="logo-mark.png" />
+  <link rel="apple-touch-icon" href="logo-mark.png" />
+  <meta property="og:title" content="Nerovion — Real-Time Emotional Intelligence for Neurodivergent Professionals" />
+  <meta property="og:description" content="Nerovion translates unspoken communication cues into real-time insights — built for neurodivergent professionals who deserve tools that actually work." />
+  <meta property="og:image" content="logo-mark.png" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet" />
@@ -29,7 +36,8 @@
     /* NAV */
     nav { position: fixed; top: 0; left: 0; right: 0; z-index: 900; padding: 22px 48px; display: flex; align-items: center; justify-content: space-between; transition: background 0.4s, backdrop-filter 0.4s; }
     nav.scrolled { background: rgba(19,13,34,0.88); backdrop-filter: blur(16px); border-bottom: 1px solid var(--deep-border); }
-    .nav-logo { font-family: var(--font-display); font-size: 1.6rem; font-weight: 600; letter-spacing: 0.04em; color: var(--white); text-decoration: none; cursor: pointer; }
+    .nav-logo { font-family: var(--font-display); font-size: 1.6rem; font-weight: 600; letter-spacing: 0.04em; color: var(--white); text-decoration: none; cursor: pointer; display: inline-flex; align-items: center; }
+    .nav-logo img { height: 38px; width: auto; display: block; margin-right: 10px; }
     .nav-logo span { color: var(--viola-light); }
     .nav-links { display: flex; align-items: center; gap: 2rem; list-style: none; }
     .nav-links a { font-size: 0.82rem; font-weight: 400; letter-spacing: 0.04em; color: var(--text-secondary); text-decoration: none; cursor: pointer; transition: color 0.2s; }
@@ -114,11 +122,19 @@
     .demo-live { display: inline-flex; align-items: center; gap: 5px; color: var(--orange); }
     .demo-live::before { content: ''; display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--orange); animation: livepulse 1.4s ease-in-out infinite; }
 
-    /* Signal orb — Problem page, centered in right-column space */
-    .problem-orb-anchor { position: absolute; top: 160px; right: 280px; width: 200px; height: 200px; pointer-events: none; }
-    .p-orb-chip { position: absolute; background: rgba(38,26,58,0.95); border: 1px solid var(--deep-border); padding: 6px 11px; font-size: 0.67rem; font-weight: 500; letter-spacing: 0.04em; white-space: nowrap; will-change: transform; }
-    .p-orb-chip.active { color: var(--white); border-color: var(--viola); }
-    .p-orb-chip:not(.active) { color: var(--text-secondary); }
+    /* Signal orb — Problem page (self-contained stage: orb + 4 corner chips, no overflow) */
+    .problem-hero { display: grid; grid-template-columns: 1fr minmax(320px, 380px); gap: 64px; align-items: center; margin-bottom: 48px; }
+    .problem-orb-wrap { position: relative; width: 100%; aspect-ratio: 1 / 1; max-height: 380px; }
+    .problem-orb { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 220px; height: 220px; }
+    .problem-chips { position: absolute; inset: 0; pointer-events: none; }
+    .problem-chip { position: absolute; background: rgba(38,26,58,0.9); border: 1px solid var(--deep-border); padding: 7px 12px; font-size: 0.68rem; font-weight: 500; color: var(--text-secondary); white-space: nowrap; letter-spacing: 0.04em; animation: floatChip 6s ease-in-out infinite, chipHighlight 5s ease-in-out infinite; max-width: calc(50% - 12px); }
+    .problem-chip--tl { top: 8px;    left: 8px;  animation-duration: 6s,   5s; animation-delay: 0s,    0s; }
+    .problem-chip--tr { top: 8px;    right: 8px; animation-duration: 6s,   7s; animation-delay: 1.5s, -2s; }
+    .problem-chip--bl { bottom: 8px; left: 8px;  animation-duration: 6s,   4s; animation-delay: 0.8s, -1.5s; }
+    .problem-chip--br { bottom: 8px; right: 8px; animation-duration: 6s, 6.3s; animation-delay: 2.2s, -3.5s; }
+    .problem-chip .dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; margin-right: 7px; vertical-align: middle; }
+    .dot--viola { background: var(--viola-light); }
+    .dot--orange { background: var(--orange); }
 
     /* TRUST BAR */
     .trust-bar { background: var(--deep-surface); border-top: 1px solid var(--deep-border); border-bottom: 1px solid var(--deep-border); padding: 20px 48px; display: flex; align-items: center; gap: 40px; flex-wrap: wrap; }
@@ -303,6 +319,11 @@
     @keyframes pulse { 0%, 100% { opacity: 0.4; transform: translate(-50%,-50%) scale(1); } 50% { opacity: 1; transform: translate(-50%,-50%) scale(1.03); } }
     @keyframes glow { 0%, 100% { filter: brightness(0.85); } 50% { filter: brightness(1.2); } }
     @keyframes floatChip { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+    @keyframes chipHighlight {
+      0%, 5%    { border-color: var(--deep-border); color: var(--text-secondary); }
+      15%, 55%  { border-color: var(--viola);       color: var(--white); }
+      65%, 100% { border-color: var(--deep-border); color: var(--text-secondary); }
+    }
     @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes soundwave { 0%, 100% { transform: scaleY(0.5); opacity: 0.6; } 50% { transform: scaleY(1.4); opacity: 1; } }
@@ -337,10 +358,40 @@
       .founder-feature { grid-template-columns: 1fr; }
       .founder-feature.reverse { grid-template-columns: 1fr; }
       .founder-feature.reverse .founder-text-col { order: 0; }
-      .founder-photo-col img { min-height: 280px; max-height: 320px; }
+      .founder-photo-col { aspect-ratio: 4 / 5; }
+      .founder-photo-col img { min-height: 0; max-height: none; height: 100%; object-position: center 22%; }
+      .founder-feature[data-founder="izabel"] .founder-photo-col img { object-position: center 30%; }
+      /* Problem orb: stack title above orb; chips become a 2x2 grid below the orb */
+      .problem-hero { grid-template-columns: 1fr; gap: 32px; }
+      .problem-orb-wrap { padding-top: 16px; }
+      .problem-chips { position: static; inset: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 28px; pointer-events: auto; }
+      .problem-chip, .problem-chip--tl, .problem-chip--tr, .problem-chip--bl, .problem-chip--br {
+        position: static; top: auto; bottom: auto; left: auto; right: auto;
+        text-align: center; justify-self: stretch;
+      }
+      /* Body text blocks under the Problem hero were locked to 58% on desktop — let them breathe on mobile */
+      #page-problem [style*="max-width:58%"],
+      #page-problem [style*="max-width: 58%"] { max-width: 100% !important; }
       .capture-outer { padding: 80px 24px; }
       .trust-bar { padding: 16px 24px; }
       footer { padding: 48px 24px 32px; }
+    }
+
+    /* PHONE — finer tuning under 600px */
+    @media (max-width: 600px) {
+      nav { padding: 16px 18px; }
+      .nav-logo { font-size: 1.35rem; }
+      .nav-logo img { height: 32px; margin-right: 8px; }
+      .hero { padding: 88px 18px 56px; }
+      .section-wrap { padding: 0 18px; }
+      .section-pad { padding: 64px 0; }
+      .problem-chip { font-size: 0.62rem; padding: 6px 8px; white-space: normal; line-height: 1.3; }
+      .survey-strip { padding: 56px 18px; }
+      .survey-card { padding: 28px 24px 24px; }
+      .capture-outer { padding: 64px 18px; }
+      .founder-text-col { padding: 36px 24px; }
+      .trust-bar { padding: 14px 18px; gap: 20px; }
+      footer { padding: 40px 18px 28px; }
     }
   </style>
 </head>
@@ -348,7 +399,7 @@
 
 <!-- NAV -->
 <nav id="nav">
-  <a class="nav-logo" onclick="showPage('home')">Nero<span>vion</span></a>
+  <a class="nav-logo" onclick="showPage('home')"><img src="logo-mark.png" alt="Nerovion" />Nero<span>vion</span></a>
   <ul class="nav-links" id="navLinks">
     <li><a onclick="showPage('problem')">The Problem</a></li>
     <li><a onclick="showPage('how')">How It Works</a></li>
@@ -516,21 +567,23 @@
     <div class="section-wrap">
 
       <!-- V4 two-column grid: title left, orb right -->
-      <div style="display:grid;grid-template-columns:1fr 320px;gap:80px;align-items:start;margin-bottom:48px;">
+      <div class="problem-hero">
         <div>
           <div class="section-eyebrow">The Problem</div>
           <h2 class="section-title reveal">Most communication<br><em>happens without words.</em></h2>
         </div>
-        <div style="display:flex;justify-content:center;align-items:center;padding-top:48px;">
-          <div style="position:relative;width:220px;height:220px;flex-shrink:0;">
+        <div class="problem-orb-wrap">
+          <div class="problem-orb">
             <div style="position:absolute;border-radius:50%;border:1px solid rgba(167,45,145,0.12);width:220px;height:220px;top:50%;left:50%;transform:translate(-50%,-50%);animation:pulse 4s ease-in-out infinite;"></div>
             <div style="position:absolute;border-radius:50%;border:1px solid rgba(167,45,145,0.2);width:165px;height:165px;top:50%;left:50%;transform:translate(-50%,-50%);animation:pulse 4s ease-in-out 0.6s infinite;"></div>
             <div style="position:absolute;border-radius:50%;border:1px solid rgba(167,45,145,0.35);width:110px;height:110px;top:50%;left:50%;transform:translate(-50%,-50%);animation:pulse 4s ease-in-out 1.2s infinite;"></div>
             <div style="position:absolute;width:60px;height:60px;border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);background:radial-gradient(circle,var(--viola) 0%,var(--viola-dark) 60%,transparent 100%);animation:glow 4s ease-in-out infinite;will-change:filter;"></div>
-            <div style="position:absolute;top:5%;left:-120%;background:rgba(38,26,58,0.9);border:1px solid var(--viola);padding:7px 12px;font-size:0.68rem;font-weight:500;color:var(--white);white-space:nowrap;animation:floatChip 6s ease-in-out infinite;letter-spacing:0.04em;"><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--viola-light);margin-right:7px;vertical-align:middle;"></span>Tone shift</div>
-            <div style="position:absolute;top:30%;right:-105%;background:rgba(38,26,58,0.9);border:1px solid var(--deep-border);padding:7px 12px;font-size:0.68rem;font-weight:500;color:var(--text-secondary);white-space:nowrap;animation:floatChip 6s ease-in-out 1.5s infinite;letter-spacing:0.04em;"><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--orange);margin-right:7px;vertical-align:middle;"></span>Micro-expression</div>
-            <div style="position:absolute;bottom:28%;left:-115%;background:rgba(38,26,58,0.9);border:1px solid var(--viola);padding:7px 12px;font-size:0.68rem;font-weight:500;color:var(--white);white-space:nowrap;animation:floatChip 6s ease-in-out 0.8s infinite;letter-spacing:0.04em;"><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--viola-light);margin-right:7px;vertical-align:middle;"></span>Engagement dropping</div>
-            <div style="position:absolute;bottom:5%;right:-85%;background:rgba(38,26,58,0.9);border:1px solid var(--deep-border);padding:7px 12px;font-size:0.68rem;font-weight:500;color:var(--text-secondary);white-space:nowrap;animation:floatChip 6s ease-in-out 2.2s infinite;letter-spacing:0.04em;"><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--orange);margin-right:7px;vertical-align:middle;"></span>Hesitation</div>
+          </div>
+          <div class="problem-chips">
+            <div class="problem-chip problem-chip--tl"><span class="dot dot--viola"></span>Tone shift</div>
+            <div class="problem-chip problem-chip--tr"><span class="dot dot--orange"></span>Micro-expression</div>
+            <div class="problem-chip problem-chip--bl"><span class="dot dot--viola"></span>Engagement dropping</div>
+            <div class="problem-chip problem-chip--br"><span class="dot dot--orange"></span>Hesitation</div>
           </div>
         </div>
       </div>
@@ -766,7 +819,7 @@
   </div>
 
   <!-- IZZY -->
-  <div class="founder-feature reverse reveal">
+  <div class="founder-feature reverse reveal" data-founder="izabel">
     <div class="founder-photo-col" style="position:relative;">
       <img src="izabel.jpeg" alt="Izabel Stapleton" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
       <div class="f-initials" style="display:none;">IS</div>
