@@ -219,14 +219,63 @@
     .status-tag { background: var(--deep); border: 1px solid var(--deep-border); padding: 8px 12px; font-size: 0.7rem; color: var(--text-muted); transition: all 0.4s; }
     .status-tag.action { border-color: var(--viola); color: var(--viola-light); }
 
-    /* PRIVACY */
-    .privacy-block { background: var(--deep-surface); border: 1px solid var(--deep-border); padding: 48px; margin-top: 64px; }
-    .privacy-block h3 { font-family: var(--font-display); font-size: 1.6rem; font-weight: 400; color: var(--white); margin-bottom: 16px; }
-    .privacy-block p { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.8; max-width: 600px; }
-    .privacy-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; margin-top: 32px; }
-    .privacy-item { background: var(--deep-mid); padding: 24px; border: 1px solid var(--deep-border); }
-    .privacy-item-title { font-size: 0.7rem; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--viola-light); margin-bottom: 8px; }
-    .privacy-item p { font-size: 0.82rem; color: var(--text-secondary); }
+    /* ── PRIVACY SECTION (v2) ── */
+    .privacy-split { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin-top: 24px; margin-bottom: 80px; }
+    .privacy-panel { background: var(--deep-surface); border: 1px solid var(--deep-border); padding: 40px; position: relative; }
+    .privacy-panel.privacy-stays { border-left: 2px solid var(--viola); }
+    .privacy-panel.privacy-goes { border-left: 2px solid var(--orange); }
+    .privacy-panel-label { font-size: 0.68rem; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 18px; }
+    .privacy-panel.privacy-stays .privacy-panel-label { color: var(--viola-light); }
+    .privacy-panel.privacy-goes .privacy-panel-label { color: var(--orange-light); }
+    .privacy-panel-headline { font-family: var(--font-display); font-size: 1.7rem; font-weight: 300; color: var(--white); line-height: 1.2; margin-bottom: 28px; letter-spacing: -0.01em; }
+    .privacy-list { list-style: none; padding: 0; margin: 0; }
+    .privacy-list li { padding: 14px 0 14px 22px; border-top: 1px solid var(--deep-border); color: var(--text-secondary); font-size: 0.92rem; line-height: 1.55; position: relative; }
+    .privacy-list li:first-child { border-top: none; }
+    .privacy-list li::before { content: ''; position: absolute; left: 0; top: 23px; width: 10px; height: 1px; }
+    .privacy-panel.privacy-stays .privacy-list li::before { background: var(--viola); }
+    .privacy-panel.privacy-goes .privacy-list li::before { background: var(--orange); }
+    .privacy-panel-note { margin-top: 28px; padding-top: 22px; border-top: 1px solid var(--deep-border); font-size: 0.82rem; color: var(--text-muted); line-height: 1.65; max-width: none; }
+
+    .privacy-vendor { background: linear-gradient(135deg, rgba(167,45,145,0.08), rgba(237,125,27,0.04)); border: 1px solid var(--deep-border); padding: 44px; margin-bottom: 80px; }
+    .privacy-vendor-label { font-size: 0.68rem; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--orange); margin-bottom: 18px; }
+    .privacy-vendor h3 { font-family: var(--font-display); font-size: 1.8rem; font-weight: 300; color: var(--white); line-height: 1.2; margin-bottom: 20px; letter-spacing: -0.01em; }
+    .privacy-vendor p { font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.7; max-width: none; }
+    .privacy-vendor ul { list-style: none; padding: 0; margin: 0; }
+    .privacy-vendor ul li { padding: 12px 0 12px 22px; border-top: 1px solid var(--deep-border); color: var(--text-secondary); font-size: 0.92rem; line-height: 1.55; position: relative; }
+    .privacy-vendor ul li:first-child { border-top: none; }
+    .privacy-vendor ul li::before { content: ''; position: absolute; left: 0; top: 21px; width: 10px; height: 1px; background: var(--orange); }
+
+    .privacy-data { margin-bottom: 80px; }
+    .privacy-section-label { font-size: 0.68rem; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--orange); margin-bottom: 18px; }
+    .privacy-data h3, .privacy-tiers-block h3, .privacy-compliance-block h3 { font-family: var(--font-display); font-size: 1.8rem; font-weight: 300; color: var(--white); line-height: 1.2; margin-bottom: 24px; letter-spacing: -0.01em; }
+    .privacy-data ul { list-style: none; padding: 0; margin: 0; max-width: 760px; }
+    .privacy-data ul li { padding: 14px 0 14px 22px; border-top: 1px solid var(--deep-border); color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6; position: relative; }
+    .privacy-data ul li:first-child { border-top: none; }
+    .privacy-data ul li::before { content: ''; position: absolute; left: 0; top: 24px; width: 10px; height: 1px; background: var(--viola); }
+    .privacy-data ul li strong { color: var(--text-primary); font-weight: 500; }
+
+    .privacy-tiers-block { margin-bottom: 80px; }
+    .privacy-tiers-block p { font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 28px; max-width: 760px; }
+    .privacy-tiers { width: 100%; border-collapse: collapse; background: var(--deep-surface); border: 1px solid var(--deep-border); }
+    .privacy-tiers th, .privacy-tiers td { padding: 20px 24px; text-align: left; border-bottom: 1px solid var(--deep-border); font-size: 0.92rem; }
+    .privacy-tiers thead { background: var(--deep-mid); }
+    .privacy-tiers th { font-size: 0.68rem; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--orange); }
+    .privacy-tiers tbody td:first-child { color: var(--white); font-weight: 500; }
+    .privacy-tiers tbody td:nth-child(2) { color: var(--text-primary); font-family: var(--font-display); font-size: 1.05rem; font-style: italic; }
+    .privacy-tiers tbody td:last-child { color: var(--text-secondary); }
+    .privacy-tiers tbody tr:last-child td { border-bottom: none; }
+    .privacy-tiers tbody tr.recommended { background: rgba(237,125,27,0.05); }
+    .privacy-tiers tbody tr.recommended td:first-child::after { content: ' Recommended'; display: inline-block; font-family: var(--font-body); font-size: 0.6rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--orange); margin-left: 12px; padding: 3px 8px; border: 1px solid var(--orange); vertical-align: middle; font-weight: 500; }
+
+    .privacy-compliance-block { margin-bottom: 80px; }
+    .privacy-compliance { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; margin-top: 32px; }
+    .privacy-compliance-item { background: var(--deep-surface); border: 1px solid var(--deep-border); padding: 28px 24px; }
+    .compliance-label { font-size: 0.65rem; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--orange); margin-bottom: 12px; }
+    .compliance-value { font-family: var(--font-display); font-size: 1.15rem; font-weight: 400; color: var(--white); line-height: 1.3; letter-spacing: -0.005em; }
+    .compliance-status { margin-top: 8px; font-size: 0.78rem; color: var(--text-muted); }
+
+    .privacy-closing { margin-top: 80px; padding-top: 56px; border-top: 1px solid var(--deep-border); text-align: center; }
+    .privacy-closing p { font-family: var(--font-display); font-style: italic; font-weight: 300; font-size: clamp(1.4rem, 2.2vw, 1.9rem); color: var(--text-primary); letter-spacing: -0.005em; max-width: none; margin: 0; }
 
     /* FOR YOU / PROFESSIONALS */
     .pros-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; margin-top: 72px; }
@@ -354,7 +403,15 @@
       .screen-mockup { position: static; }
       .pros-grid { grid-template-columns: 1fr; }
       .stat-row { grid-template-columns: 1fr; }
-      .privacy-grid { grid-template-columns: 1fr; }
+      .privacy-split { grid-template-columns: 1fr; }
+      .privacy-compliance { grid-template-columns: repeat(2, 1fr); }
+      .privacy-vendor { padding: 32px 24px; }
+      .privacy-panel { padding: 32px 24px; }
+      .privacy-tiers thead { display: none; }
+      .privacy-tiers tr { display: block; margin-bottom: 12px; background: var(--deep-surface); border: 1px solid var(--deep-border); }
+      .privacy-tiers td { display: block; border-bottom: 1px solid var(--deep-border); padding: 14px 20px; }
+      .privacy-tiers td::before { content: attr(data-label); display: block; font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--orange); margin-bottom: 6px; font-weight: 500; }
+      .privacy-tiers tbody td:nth-child(2) { font-size: 1.15rem; }
       .founder-feature { grid-template-columns: 1fr; }
       .founder-feature.reverse { grid-template-columns: 1fr; }
       .founder-feature.reverse .founder-text-col { order: 0; }
@@ -363,10 +420,13 @@
       .founder-feature[data-founder="izabel"] .founder-photo-col img { object-position: center 30%; }
       /* Problem orb: stack title above orb; chips become a 2x2 grid below the orb */
       .problem-hero { grid-template-columns: 1fr; gap: 32px; }
-      .problem-orb-wrap { padding-top: 16px; }
-      .problem-chips { position: static; inset: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 28px; pointer-events: auto; }
+      .problem-orb-wrap { aspect-ratio: auto; max-height: none; display: flex; flex-direction: column; align-items: center; gap: 28px; padding-top: 0; }
+      .problem-orb { position: relative; top: auto; left: auto; transform: none; margin: 0; }
+      .problem-chips { position: static; inset: auto; width: 100%; max-width: 380px; display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: 10px; pointer-events: auto; }
       .problem-chip, .problem-chip--tl, .problem-chip--tr, .problem-chip--bl, .problem-chip--br {
         position: static; top: auto; bottom: auto; left: auto; right: auto;
+        max-width: none; width: 100%; box-sizing: border-box;
+        display: flex; align-items: center; justify-content: center;
         text-align: center; justify-self: stretch;
       }
       /* Body text blocks under the Problem hero were locked to 58% on desktop — let them breathe on mobile */
@@ -385,7 +445,7 @@
       .hero { padding: 88px 18px 56px; }
       .section-wrap { padding: 0 18px; }
       .section-pad { padding: 64px 0; }
-      .problem-chip { font-size: 0.62rem; padding: 6px 8px; white-space: normal; line-height: 1.3; }
+      .problem-chip { font-size: 0.62rem; padding: 10px 8px; white-space: normal; line-height: 1.3; min-height: 44px; }
       .survey-strip { padding: 56px 18px; }
       .survey-card { padding: 28px 24px 24px; }
       .capture-outer { padding: 64px 18px; }
@@ -702,14 +762,122 @@
         </div>
       </div>
 
-      <div class="privacy-block reveal">
-        <h3>Everything stays on your device.</h3>
-        <p>No video is recorded. No audio is stored. Analysis happens locally. Only structured signals -- think "tone: hesitant" rather than a recording -- reach the AI layer. There is no data to breach because there is no data being held.</p>
-        <div class="privacy-grid">
-          <div class="privacy-item"><div class="privacy-item-title">No Recording</div><p>Video and audio are processed in real time and never stored anywhere.</p></div>
-          <div class="privacy-item"><div class="privacy-item-title">On-Device Analysis</div><p>All facial and tone analysis runs locally on your device. Nothing leaves your machine.</p></div>
-          <div class="privacy-item"><div class="privacy-item-title">Structured Signals Only</div><p>Only labeled interpretations reach the AI layer. Never raw data. Never identifiable content.</p></div>
+      <div class="privacy-callout reveal" style="background:var(--deep-surface);border:1px solid var(--deep-border);padding:32px;margin-top:48px;text-align:center;">
+        <p style="font-family:var(--font-display);font-style:italic;font-weight:300;font-size:1.3rem;color:var(--text-primary);line-height:1.45;margin:0 0 12px;">No video stored. No audio recorded.<br>Only structured signals reach our AI layer.</p>
+        <a href="#privacy" onclick="document.getElementById('privacy').scrollIntoView({behavior:'smooth'})" style="display:inline-flex;align-items:center;gap:8px;font-size:0.78rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--orange);text-decoration:none;font-weight:500;">See the full privacy architecture <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ PRIVACY ═══════════════════════ -->
+  <div id="privacy" style="background:var(--deep);border-top:1px solid var(--deep-border);border-bottom:1px solid var(--deep-border);padding:112px 48px;">
+    <div class="section-wrap" style="padding:0;">
+      <div class="section-eyebrow">Privacy</div>
+      <h2 class="section-title reveal">Your face stays on your device.<br><em>Your voice stays on your device.</em></h2>
+      <p class="section-body reveal">Nerovion runs on your machine, not in the cloud. Facial cues, tone, and pace are processed locally in your browser. Raw video and audio are never uploaded, never recorded, never stored.</p>
+
+      <!-- Split: what stays vs what goes -->
+      <div class="privacy-split">
+        <div class="privacy-panel privacy-stays reveal">
+          <div class="privacy-panel-label">Stays on your device</div>
+          <h3 class="privacy-panel-headline">What never leaves</h3>
+          <ul class="privacy-list">
+            <li>Video frames from your call</li>
+            <li>Audio waveforms and tone analysis</li>
+            <li>Facial expression detection</li>
+            <li>All biometric processing</li>
+          </ul>
+          <p class="privacy-panel-note">Processed in-browser via TensorFlow.js, MediaPipe, and the Web Audio API. Discarded frame by frame.</p>
         </div>
+        <div class="privacy-panel privacy-goes reveal">
+          <div class="privacy-panel-label">Reaches our AI layer</div>
+          <h3 class="privacy-panel-headline">What we send</h3>
+          <ul class="privacy-list">
+            <li>Detected emotion labels (e.g., "stress: moderate")</li>
+            <li>Tone tags (e.g., "tone: uncertain")</li>
+            <li>Brief transcript fragments for context</li>
+            <li>Conversation phase indicators</li>
+          </ul>
+          <p class="privacy-panel-note">We never send raw video, raw audio, biometric data, or identifying information.</p>
+        </div>
+      </div>
+
+      <!-- AI vendor callout -->
+      <div class="privacy-vendor reveal">
+        <div class="privacy-vendor-label">Our AI vendor</div>
+        <h3>Built on Anthropic Claude</h3>
+        <p>Per Anthropic's commercial terms:</p>
+        <ul>
+          <li>API logs are retained for 7 days, then deleted</li>
+          <li>Your data is never used to train AI models</li>
+          <li>Zero Data Retention available for Enterprise customers</li>
+        </ul>
+      </div>
+
+      <!-- Data usage -->
+      <div class="privacy-data reveal">
+        <div class="privacy-section-label">What we do with your data</div>
+        <h3>Privacy is the default. Always.</h3>
+        <ul>
+          <li>We <strong>never sell</strong> your data</li>
+          <li>We <strong>never share</strong> your data with third parties for their own purposes</li>
+          <li>Our AI vendors are contractually prohibited from training on your data</li>
+          <li>By default, Nerovion does not use your data to train or improve our models</li>
+          <li><strong>Free users</strong> can opt in to share anonymized insights and unlock bonus features. Off by default. Change it anytime.</li>
+          <li><strong>Paid tiers:</strong> privacy by default. We never use your data to improve our models unless you explicitly choose to opt in.</li>
+          <li><strong>Enterprise:</strong> zero training contractually available as part of your agreement.</li>
+        </ul>
+      </div>
+
+      <!-- Storage tiers -->
+      <div class="privacy-tiers-block reveal">
+        <div class="privacy-section-label">Your data storage</div>
+        <h3>You control how long we keep your insights.</h3>
+        <p>User-initiated deletion is available at every tier, anytime.</p>
+        <table class="privacy-tiers">
+          <thead>
+            <tr><th>Tier</th><th>Retention</th><th>Use case</th></tr>
+          </thead>
+          <tbody>
+            <tr><td data-label="Tier">Free</td><td data-label="Retention">0 days</td><td data-label="Use case">Live overlay, no history</td></tr>
+            <tr><td data-label="Tier">Individual</td><td data-label="Retention">30 days</td><td data-label="Use case">Session summaries, monthly review</td></tr>
+            <tr class="recommended"><td data-label="Tier">Professional</td><td data-label="Retention">90 days</td><td data-label="Use case">Pattern tracking, progress metrics</td></tr>
+            <tr><td data-label="Tier">Enterprise</td><td data-label="Retention">Up to 365 days</td><td data-label="Use case">Custom retention review, audit trails</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Compliance -->
+      <div class="privacy-compliance-block reveal">
+        <div class="privacy-section-label">Compliance</div>
+        <h3>Built to defensible standards.</h3>
+        <div class="privacy-compliance">
+          <div class="privacy-compliance-item">
+            <div class="compliance-label">SOC 2 Type II</div>
+            <div class="compliance-value">In progress</div>
+            <div class="compliance-status">Annual independent audit</div>
+          </div>
+          <div class="privacy-compliance-item">
+            <div class="compliance-label">GDPR &amp; CCPA</div>
+            <div class="compliance-value">Compliant by design</div>
+            <div class="compliance-status">From day one</div>
+          </div>
+          <div class="privacy-compliance-item">
+            <div class="compliance-label">HIPAA BAA</div>
+            <div class="compliance-value">Enterprise (planned)</div>
+            <div class="compliance-status">For clinical deployments</div>
+          </div>
+          <div class="privacy-compliance-item">
+            <div class="compliance-label">Data deletion</div>
+            <div class="compliance-value">On-demand</div>
+            <div class="compliance-status">At any tier</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Closing -->
+      <div class="privacy-closing reveal">
+        <p>Built for the people who need to be sure.</p>
       </div>
     </div>
   </div>
