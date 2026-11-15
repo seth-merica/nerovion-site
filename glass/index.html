@@ -97,6 +97,10 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--viola-soft
 .sug:empty{display:none}
 .cap.swap{animation:swap .42s ease}
 @keyframes swap{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.heard{margin-top:calc(7px * var(--s));font-size:calc(12px * var(--s));line-height:1.3;color:rgba(255,255,255,.62);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:0;transition:opacity .5s;text-shadow:0 1px 3px rgba(0,0,0,.8)}
+.heard.on{opacity:1}
+.heard i{font-style:normal;letter-spacing:.16em;font-size:calc(9px * var(--s));color:var(--ink-3);margin-right:.6em}
+.card.solid .heard{text-shadow:none}
 .feed{display:none;margin-top:calc(10px * var(--s));border-top:1px solid rgba(255,255,255,.09);padding-top:calc(8px * var(--s));
   max-height:min(38vh,calc(260px * var(--s)));overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y}
 .card.solid .feed.has{display:block}
@@ -186,7 +190,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--viola-soft
       <button class="sw" id="cleanSw" role="switch" aria-checked="true" aria-label="Clean view">CLEAN<span class="t"></span></button>
     </div>
     <div class="cap" id="cap"><div class="obs" id="obs">Reading the room.</div><div class="sug" id="sug"></div></div>
-    <div class="feed" id="feed"><div class="fh">EARLIER</div><div id="feedList"></div></div>
+    <div class="heard" id="heard"></div><div class="feed" id="feed"><div class="fh">EARLIER</div><div id="feedList"></div></div>
     <div class="grip" id="grip" aria-hidden="true"></div>
   </section>
 
@@ -206,7 +210,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--viola-soft
       <div class="note" id="camNote" hidden></div>
       <button class="btn primary" id="startBtn">Start camera</button>
       <button class="btn ghost" id="demoBtn">Watch the demo</button>
-      <div class="fine">Faces and sound are read on this phone. Nothing is recorded, saved or sent.</div>
+      <div class="fine">Faces, sound and words are read on this phone. Nerovion records, saves and sends nothing. iPhone speech-to-text may use Apple’s servers.</div>
       <div class="fine" id="a2hs" hidden>To keep it on your home screen: Share, then Add to Home Screen.</div>
     </div>
   </div>
@@ -214,8 +218,10 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--viola-soft
   <div class="sheet" id="more" hidden>
     <div class="panel" role="dialog" aria-label="Settings">
       <div class="sheet-h"><h2>Nerovion Glass</h2><button class="link" id="closeMore">Done</button></div>
-      <div class="row"><div class="lab"><b>Sound reading</b><small>Uses loudness only, to tell when you're talking and when they're done. No words are heard or kept.</small></div>
+      <div class="row"><div class="lab"><b>Sound reading</b><small>Uses loudness only, to tell when you're talking and when they're done. Words have their own switch below.</small></div>
         <button class="sw" id="micSw" role="switch" aria-checked="true" aria-label="Sound reading"><span class="t"></span></button></div>
+      <div class="row"><div class="lab"><b>Words</b><small>Your phone turns speech into words so nudges follow what's said. iPhone may use Apple's servers to do this. Nerovion never saves or sends the words. <span id="wordsStatus"></span></small></div>
+        <button class="sw" id="wordsSw" role="switch" aria-checked="true" aria-label="Words"><span class="t"></span></button></div>
       <div class="row"><div class="lab"><b>Clean view</b><small>On: glass card with the latest nudge. Off: solid card with earlier nudges you can scroll.</small></div>
         <button class="sw" id="cleanSw2" role="switch" aria-checked="true" aria-label="Clean view"><span class="t"></span></button></div>
       <div>
@@ -263,13 +269,14 @@ const S = {
   noneShown: false,
   running: false,
   mic: store.get('mic', true),
+  words: store.get('words', true),
   audio: null,
   demo: null,
 };
 
 /* ---------------- Card ---------------- */
 const card = $('card'), obsEl = $('obs'), sugEl = $('sug'), capEl = $('cap');
-const C = { shownAt: 0, pri: 0, id: null, queue: null, idleTimer: 0 };
+const C = { shownAt: 0, pri: 0, id: null, queue: null, idleTimer: 0, cueAt: {} };
 
 function setClean(on){
   card.classList.toggle('clean', on); card.classList.toggle('solid', !on);
@@ -300,6 +307,17 @@ const CUES = {
   lookAway:{pri:1, cd:50, lines:[["Their attention drifted.","Ask them a question."],["Eyes went elsewhere.","Bring them back with their name."]]},
   longTalk:{pri:1, cd:90, lines:[["Long stretch on your side.","How does that land for you?"],["They've been listening a while.","What's your take?"]]},
   tryEnter:{pri:2, cd:40, lines:[["They're trying to come in.","Pause and let them in."]]},
+  // from words
+  wQuestion:{pri:2.5, cd:25, lines:[["They asked: “{q}”","Answer that first, then check it landed."],["Question on the table: “{q}”","Give a short answer, then ask if that helps."]]},
+  wPrice:{pri:2.5, cd:60, lines:[["Price came up: “{q}”","Anchor on the value first, then the number."],["Money is on their mind: “{q}”","What budget are you working with?"]]},
+  wUnsure:{pri:2.5, cd:50, lines:[["They sound unsure: “{q}”","What would make this an easy yes?"],["Hesitation: “{q}”","What's holding you back?"]]},
+  wTiming:{pri:2.5, cd:60, lines:[["Timing came up: “{q}”","When would be the right time to start?"]]},
+  wCurrent:{pri:2.5, cd:60, lines:[["They named what they use now: “{q}”","What would you change about it?"]]},
+  wOthers:{pri:2.5, cd:60, lines:[["Someone else is in the decision: “{q}”","Who else should we bring in?"]]},
+  wPain:{pri:2.5, cd:45, lines:[["A pain point: “{q}”","Tell me more about that."],["That sounds like a problem for them: “{q}”","How is that affecting you today?"]]},
+  wYes:{pri:2.5, cd:45, lines:[["A yes signal: “{q}”","Name the next step and a date."],["They're leaning in: “{q}”","Ask for the next step now."]]},
+  wName:{pri:3, lines:[["Got their name: {name}.","Use it once in your next line."]]},
+  wNoQ:{pri:1, cd:150, lines:[["No questions from you in a while.","Ask what matters most to them."]]},
   yourTurn:{pri:1, cd:40, lines:[["They finished their thought.","Answer, then ask one back."],["They paused for you.","Reply, then ask what matters most to them."]]},
 };
 const MIN_HOLD = 8000, ID_HOLD = 3500, IDLE_AFTER = 24000;
@@ -325,22 +343,24 @@ function renderFeed(){
   fitCard();
 }
 
-function cue(id, person){
+function cue(id, person, vars){
   const def = CUES[id]; if (!def) return;
   const t = now();
   const p = person || S.current;
-  if (def.cd && p){ const last = p.cueAt[id] || -1e9; if (t - last < def.cd*1000) return; }
+  const cdm = p ? p.cueAt : C.cueAt;
+  if (def.cd){ const last = cdm[id] || -1e9; if (t - last < def.cd*1000) return; }
   const soft = C.id === 'none' || C.id === 'idle' || !C.id;
   const hold = def.pri >= 3 ? ID_HOLD : MIN_HOLD;
   if (!soft && t - C.shownAt < hold){
-    if (!C.queue || def.pri >= (CUES[C.queue.id] || {pri:0}).pri) C.queue = {id, person:p, at:t};
+    if (!C.queue || def.pri >= (CUES[C.queue.id] || {pri:0}).pri) C.queue = {id, person:p, at:t, vars};
     return;
   }
-  if (p) p.cueAt[id] = t;
+  cdm[id] = t;
   let line = def.lines.length > 1 && p && p.lastLine ? pick(def.lines.filter(l => l !== p.lastLine)) : pick(def.lines);
   if (p) p.lastLine = line;
   const name = p ? p.name : '';
-  const o = line[0].replace('{name}', name), g = line[1].replace('{name}', name);
+  const fill = x => x.replace(/\{(\w+)\}/g, (m, k) => k === 'name' ? name : ((vars && vars[k]) || ''));
+  const o = fill(line[0]), g = fill(line[1]);
   showLine(o, g, {paused: id === 'none'});
   if (id !== 'none') logLine(o, g, name);
   C.shownAt = t; C.pri = def.pri; C.id = id; C.queue = null;
@@ -351,7 +371,7 @@ function cardTick(){
     const q = C.queue, hold = (CUES[q.id] || {pri:0}).pri >= 3 ? ID_HOLD : MIN_HOLD;
     if (t - C.shownAt >= hold){
       C.queue = null;
-      if (t - q.at < 12000 && (q.person === S.current || q.id === 'none')){ C.id = 'idle'; cue(q.id, q.person); }
+      if (t - q.at < 12000 && (q.person === S.current || q.id === 'none')){ C.id = 'idle'; cue(q.id, q.person, q.vars); }
     }
   }
   if (C.id && C.id !== 'none' && C.id !== 'idle' && t - C.shownAt > IDLE_AFTER && S.current){
@@ -620,6 +640,115 @@ function talkBalance(p, theyTalk, voice, t, dt){
   if (sg.awaitTurn && !theyTalk && !voice && t - sg.awaitTurn > 2600){ sg.awaitTurn = 0; cue('yourTurn', p); }
 }
 
+/* words: the phone's own speech-to-text, read by simple rules here. Nothing is kept or sent by this page. */
+const SRC = window.SpeechRecognition || window.webkitSpeechRecognition;
+const WD = {rec:null, status:'', fails:0, blocked:false, done:new Map(), pend:null, myQAt:0, myWords:0, heardT:0};
+const QSTART = /\b(what|how|why|when|where|who|which|can you|could you|would you|will you|do you|does (it|that|this)|is (it|that|there)|are (you|there|we)|should (we|i))\b/i;
+const NAME_RE = /\b(?:my name is|my name's|call me|this is)\s+([A-Z][a-z]{1,15})\b/;
+const RULES = [
+  ['wYes', /\b(sounds (good|great)|love (it|that)|that'?s (perfect|great|exactly)|makes sense|let'?s do (it|this)|how do (we|i) (start|get started|sign up)|next steps?|when can (we|you) start|i'?m in)\b/i],
+  ['wPrice', /\b(price|pricing|cost|costs|expensive|budget|afford|too much|cheaper|discount|fees?|how much|quote)\b/i],
+  ['wOthers', /\b(my (boss|manager|partner|wife|husband|team|ceo|owner|cfo)|check with|run (it|this) by|talk (to|with) (my|the)|the board|sign off)\b/i],
+  ['wCurrent', /\b(already (have|use|using|got)|we use|we'?re using|current (provider|vendor|team|setup|system)|in-?house|another (company|vendor|agency))\b/i],
+  ['wTiming', /\b(busy|not right now|not now|next (week|month|quarter|year)|timing|no time|bad time|after the holidays|end of the year)\b/i],
+  ['wUnsure', /\b(not sure|i don'?t know|maybe|let me think|think about it|we'?ll see|i guess|hard to say|not convinced)\b/i],
+  ['wPain', /\b(worried|concern(ed)?|risk|problem|issue|frustrat\w*|struggl\w*|hard time|difficult|headache|stuck|falling behind)\b/i],
+];
+function clip(t, n){ n = n || 46; t = t.replace(/\s+/g, ' ').trim(); if (t.length <= n) return t; return t.slice(0, n - 1).replace(/\s\S*$/, '') + '…'; }
+function snip(text, at){
+  text = text.replace(/\s+/g, ' ').trim(); if (text.length <= 46) return text;
+  const w = text.split(' '); let pos = 0, i = 0;
+  for (; i < w.length - 1; i++){ if (pos + w[i].length >= at) break; pos += w[i].length + 1; }
+  const from = Math.max(0, i - 3); let out = w.slice(from, from + 8).join(' ');
+  if (out.length > 44) out = out.slice(0, 44).replace(/\s\S*$/, '');
+  return (from > 0 ? '…' : '') + out + (from + 8 < w.length ? '…' : '');
+}
+function questionOf(text){
+  const q = text.indexOf('?');
+  if (q >= 0){ const st = Math.max(text.lastIndexOf('.', q), text.lastIndexOf('!', q)) + 1; return text.slice(st, q + 1).trim(); }
+  const m = text.match(QSTART); if (m && m.index < 14) return text.slice(m.index).trim() + '?';
+  return null;
+}
+function speaker(){
+  const p = S.current, t = now();
+  if (!p) return 'room';
+  return p.sig && p.sig.theirLastTalk && t - p.sig.theirLastTalk < 2500 ? 'them' : 'me';
+}
+function showHeard(text){
+  const h = $('heard'); if (!h) return;
+  h.textContent = ''; const i = document.createElement('i'); i.textContent = 'HEARD';
+  const tail = text.replace(/\s+/g, ' ').trim(); h.append(i, document.createTextNode(tail.length > 70 ? '…' + tail.slice(-70) : tail));
+  h.classList.add('on'); clearTimeout(WD.heardT); WD.heardT = setTimeout(() => h.classList.remove('on'), 5000);
+}
+function onWords(text){
+  text = (text || '').trim(); if (!text) return;
+  const t = now(), who = speaker();
+  if (who === 'me'){
+    if (questionOf(text)){ WD.myQAt = t; WD.myWords = 0; return; }
+    WD.myWords += text.split(/\s+/).length;
+    if (WD.myQAt && t - WD.myQAt > 120000 && WD.myWords > 120){ WD.myQAt = t; WD.myWords = 0; cue('wNoQ'); }
+    return;
+  }
+  readWords(text, S.current);
+}
+function readWords(text, p){
+  const nm = text.match(NAME_RE);
+  if (nm && p && /^Person \d+$/.test(p.name)){
+    p.name = nm[1]; renderPeople(); if (S.current === p) setPill('face', p.name);
+    cue('wName', p); return;
+  }
+  const q = questionOf(text);
+  if (q && q.split(/\s+/).length >= 3){ cue('wQuestion', p, {q: clip(q)}); return; }
+  for (const [id, re] of RULES){ const m = text.match(re); if (m){ cue(id, p, {q: snip(text, m.index)}); return; } }
+}
+// a result can sit unfinished on iPhone, so a phrase that stops changing for 1.5s is read too
+function takeResult(i, txt, final){
+  const done = WD.done.get(i) || 0, part = txt.slice(done).trim();
+  if (part.split(/\s+/).length >= (final ? 1 : 3)){ WD.done.set(i, txt.length); onWords(part); }
+}
+function syncWords(){
+  $('wordsSw').setAttribute('aria-checked', S.words); store.set('words', S.words);
+  $('wordsStatus').textContent = S.words && WD.status ? 'Now: ' + WD.status + '.' : '';
+}
+function startWords(){
+  if (!S.words || S.mode !== 'live' || WD.rec || WD.blocked || document.visibilityState !== 'visible') return;
+  if (!SRC){ WD.status = 'not available in this browser'; syncWords(); return; }
+  const r = new SRC();
+  r.lang = navigator.language || 'en-US'; r.continuous = true; r.interimResults = true; r.maxAlternatives = 1;
+  WD.done = new Map();
+  r.onresult = e => {
+    for (let i = e.resultIndex; i < e.results.length; i++){
+      const res = e.results[i], txt = res[0].transcript;
+      if (res.isFinal){ takeResult(i, txt, true); WD.pend = null; }
+      else {
+        showHeard(txt);
+        if (!WD.pend || WD.pend.i !== i || WD.pend.txt !== txt){
+          WD.pend = {i, txt}; clearTimeout(WD.pendT);
+          WD.pendT = setTimeout(() => { if (WD.pend && WD.pend.i === i && WD.pend.txt === txt) takeResult(i, txt, false); }, 1500);
+        }
+      }
+    }
+    if (WD.status !== 'listening' || WD.fails){ WD.fails = 0; WD.status = 'listening'; syncWords(); }
+  };
+  r.onerror = e => {
+    if (e.error === 'not-allowed' || e.error === 'service-not-allowed'){
+      WD.blocked = true; WD.status = 'speech recognition was not allowed. Tap the Words switch to try again';
+      toast('Words are off: speech recognition was not allowed.', 4000);
+    } else if (e.error !== 'no-speech' && e.error !== 'aborted'){ WD.fails++; WD.status = 'paused (' + e.error + '), retrying'; }
+    syncWords();
+  };
+  r.onend = () => { if (WD.rec === r) WD.rec = null; if (S.words && S.mode === 'live' && !WD.blocked) setTimeout(startWords, WD.fails > 3 ? 6000 : 300); };
+  try{ r.start(); WD.rec = r; WD.status = 'listening'; }catch(e){ WD.status = 'could not start'; }
+  syncWords();
+}
+function stopWords(){ const r = WD.rec; WD.rec = null; clearTimeout(WD.pendT); WD.pend = null; if (r){ r.onend = null; try{ r.abort(); }catch(e){} } }
+function toggleWords(){
+  S.words = !S.words; WD.blocked = false; WD.fails = 0; WD.status = '';
+  if (S.words) startWords(); else { stopWords(); $('heard').classList.remove('on'); }
+  syncWords();
+  toast(S.words ? 'Words on. Nudges follow what’s said.' : 'Words off.');
+}
+
 /* ---------------- Drawing ---------------- */
 const ov = $('overlay'), octx = ov.getContext('2d');
 function fitOverlay(){ const r = devicePixelRatio || 1; ov.width = innerWidth*r; ov.height = innerHeight*r; octx.setTransform(r,0,0,r,0,0); }
@@ -737,12 +866,13 @@ async function startLive(){
     return;
   }
   enterApp('live');
+  WD.myQAt = now(); startWords();
   if (!S.models){ showLine('Getting the face tool ready.', 'First start can take a minute. Later starts are quicker.', {quiet:true}); C.id = 'warm'; }
   const ok = await loadModels();
   if (!ok) toast('The face tool did not load. Check the connection and reopen.', 5000);
 }
 function enterApp(mode){
-  stopDemo();
+  stopDemo(); if (mode !== 'live') stopWords();
   S.mode = mode; $('start').hidden = true; $('rail').hidden = false; card.hidden = false;
   $('demoTag').hidden = mode !== 'demo';
   $('flipBtn').hidden = mode !== 'live';
@@ -765,9 +895,10 @@ const SCENES = {p1:'demo/p1.jpg', p2:'demo/p2.jpg', empty:'demo/empty.jpg'};
 // fallback boxes (scene pixels, 900x1200) if the face tool can't load here
 const FALLBACK = {p1:{x:268,y:220,width:300,height:330}, p2:{x:250,y:170,width:265,height:300}};
 const PLAN = [
-  [0,'scene','p1'], [7,'cue','smile'], [13.5,'cue','tryEnter'],
-  [19.5,'scene','empty'], [25,'scene','p2'], [32,'cue','tension'],
-  [38.5,'scene','p1'], [45,'cue','nod'], [51.5,'loop']
+  [0,'scene','p1'], [6,'cue','smile'], [13,'say','How fast could we get a team in place'],
+  [22,'say','Honestly the price feels a bit high for us right now'],
+  [30.5,'scene','empty'], [36,'scene','p2'], [42,'say','I would need to run it by my partner first'], [51,'cue','tension'],
+  [58,'scene','p1'], [64,'say','That makes sense, what are the next steps'], [72.5,'cue','nod'], [81,'loop']
 ];
 const imgCache = {}, imgReady = {};
 function loadImg(src){ return imgCache[src] || (imgCache[src] = new Promise((res, rej) => { const i = new Image(); i.onload = () => { imgReady[src] = i; res(i); }; i.onerror = rej; i.src = src; })); }
@@ -804,6 +935,7 @@ async function demoStep(t, dt){
     const [, kind, arg] = PLAN[D.step++];
     if (kind === 'scene'){ D.from = D.scene; D.scene = arg; D.fadeAt = t; }
     else if (kind === 'cue' && S.current && S.current.demoScene === D.scene) cue(arg, S.current);
+    else if (kind === 'say' && S.current && S.current.demoScene === D.scene){ showHeard(arg); readWords(arg, S.current); }
     else if (kind === 'loop'){ D.t0 = t; D.step = 0; D.simPerson = {}; forget(true); S.lastFaceAt = t; }
   }
   if (!D.scene) return;
@@ -839,7 +971,7 @@ async function wakeLock(){ try{ if ('wakeLock' in navigator && document.visibili
 
 function init(){
   setClean(store.get('clean', true));
-  syncMic(); fitOverlay(); bindDrag();
+  syncMic(); syncWords(); fitOverlay(); bindDrag();
   addEventListener('resize', fitOverlay);
   $('startBtn').onclick = startLive;
   $('demoBtn').onclick = startDemo;
@@ -854,10 +986,13 @@ function init(){
   $('resetCard').onclick = () => { cardPos = placeCard({}); store.set('card', {}); };
   $('switchMode').onclick = () => { $('more').hidden = true; if (S.mode === 'live'){ stopStream(); $('cam').hidden = true; startDemo(); } else { $('start').hidden = true; startLive(); } };
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible'){ wakeLock(); if (S.mode === 'live' && !S.stream) openCamera().catch(() => {}); if (S.audio) S.audio.ctx.resume(); }
-    else if (S.mode === 'live'){ stopStream(); }
+    if (document.visibilityState === 'visible'){ wakeLock(); if (S.mode === 'live' && !S.stream) openCamera().catch(() => {}); if (S.mode === 'live') setTimeout(startWords, 600); if (S.audio) S.audio.ctx.resume(); }
+    else if (S.mode === 'live'){ stopStream(); stopWords(); }
   });
-  addEventListener('pagehide', () => { stopStream(); S.people = []; });
+  addEventListener('pagehide', () => { stopStream(); stopWords(); S.people = []; });
+  $('wordsSw').onclick = toggleWords;
+  // Safari may only start listening from a tap, so the first tap starts it if it isn't running
+  document.addEventListener('pointerdown', () => { if (S.mode === 'live' && S.words && !WD.rec) { WD.blocked = false; startWords(); } }, true);
   setTimeout(() => { if (!new URLSearchParams(location.search).has('nopreload')) loadModels(); }, 400);
   const ios = /iPhone|iPad|iPod/.test(navigator.userAgent), standalone = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
   $('a2hs').hidden = !(ios && !standalone);
