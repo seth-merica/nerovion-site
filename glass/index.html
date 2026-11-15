@@ -142,6 +142,9 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--viola-soft
 .note{font-size:13.5px;line-height:1.45;color:#ffd2a8;background:rgba(237,125,27,.12);border:.5px solid rgba(237,125,27,.4);border-radius:12px;padding:10px 12px}
 
 .panel>*{flex-shrink:0}
+.seg{display:flex;padding:3px;border-radius:12px;background:rgba(255,255,255,.07);border:.5px solid rgba(255,255,255,.14);flex:none}
+.seg button{font-size:13.5px;font-weight:500;padding:7px 12px;border-radius:9px;color:var(--ink-2)}
+.seg button[aria-checked="true"]{background:var(--viola);color:#fff}
 .row{display:flex;align-items:center;gap:14px;min-height:44px}
 .row .lab{flex:1;min-width:0}
 .row .lab b{display:block;font-weight:500;font-size:15px}
@@ -234,6 +237,8 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--viola-soft
   <div class="sheet" id="more" hidden>
     <div class="panel" role="dialog" aria-label="Settings">
       <div class="sheet-h"><h2>Nerovion Glass</h2><button class="link" id="closeMore">Done</button></div>
+      <div class="row"><div class="lab"><b>Conversation</b><small>Casual for everyday talk. Sales for client and prospect calls.</small></div>
+        <div class="seg" id="ctxSeg" role="radiogroup" aria-label="Conversation"><button role="radio" data-ctx="casual">Casual</button><button role="radio" data-ctx="sales">Sales</button></div></div>
       <div class="row"><div class="lab"><b>Sound reading</b><small>Loudness only, to tell when you're talking and when they're done.</small></div>
         <button class="sw" id="micSw" role="switch" aria-checked="true" aria-label="Sound reading"><span class="t"></span></button></div>
       <div class="row"><div class="lab"><b>Words</b><small>Turns speech into words so nudges follow what's said. iPhone may use Apple's servers. Nothing is saved.</small><span class="now" id="wordsStatus"></span></div>
@@ -304,6 +309,8 @@ const S = {
   mic: store.get('mic', true),
   words: store.get('words', true),
   claude: store.get('claude', false),
+  ctx: store.get('ctx', 'casual'),
+  lastFace: null,
   audio: null,
   demo: null,
 };
@@ -328,33 +335,55 @@ function showLine(obs, sug, opts={}){
   card.classList.toggle('paused', !!opts.paused);
 }
 
+// src: id = who is in view, face = expressions and talk balance, words = what was said.
+// lines are shared; casual / sales lines replace them in that context.
 const CUES = {
-  newPerson:{pri:3, lines:[["New face in view.","Open with their name."],["Someone new is with you.","Start with a warm hello."],["A new person just stepped in.","Ask what brought them here."]]},
-  returning:{pri:3, lines:[["Back with {name}.","Pick up where you left off."],["{name} is back in view.","Recap your last point in one line."]]},
-  none:{pri:3, lines:[["No one in view.",""]]},
-  smile:{pri:2, cd:40, lines:[["A smile just came up.","Stay on this point."],["They warmed up there.","Build on what you just said."]]},
-  surprise:{pri:2, cd:40, lines:[["That caught them off guard.","Want me to walk through that?"],["Eyebrows went up.","Was that what you expected?"]]},
-  tension:{pri:2, cd:45, lines:[["Their face tightened.","What's your concern there?"],["Brows pulled in.","Does that part make sense?"]]},
-  low:{pri:2, cd:60, lines:[["Energy dipped.","How does that sit with you?"]]},
-  nod:{pri:1, cd:45, lines:[["Nodding along.","Good moment for the next step."],["Steady nods.","Shall we lock that in?"]]},
-  shake:{pri:2, cd:45, lines:[["A small head shake.","Which part doesn't fit?"]]},
-  lookAway:{pri:1, cd:50, lines:[["Their attention drifted.","Ask them a question."],["Eyes went elsewhere.","Bring them back with their name."]]},
-  longTalk:{pri:1, cd:90, lines:[["Long stretch on your side.","How does that land for you?"],["They've been listening a while.","What's your take?"]]},
-  tryEnter:{pri:2, cd:40, lines:[["They're trying to come in.","Pause and let them in."]]},
+  newPerson:{pri:3, src:'id', casual:[["New face in view.","Say hi and ask their name."],["Someone new is with you.","Ask how their day is going."]], sales:[["New face in view.","Open with their name."],["Someone new is with you.","Start with a warm hello."],["A new person just stepped in.","Ask what brought them here."]]},
+  returning:{pri:3, src:'id', lines:[["Back with {name}.","Pick up where you left off."],["{name} is back in view.","Ask about what they were saying."]]},
+  none:{pri:3, src:'id', lines:[["No one in view.",""]]},
+  smile:{pri:2, cd:90, src:'face', sig:'smiled', casual:[["They smiled at that.","Stay on this topic a bit longer."],["They warmed up there.","Ask them more about it."]], sales:[["A smile just came up.","Stay on this point."],["They warmed up there.","Build on what you just said."]]},
+  surprise:{pri:2, cd:90, src:'face', sig:'eyebrows went up', casual:[["That surprised them.","Ask what they expected."]], sales:[["That caught them off guard.","Want me to walk through that?"],["Eyebrows went up.","Was that what you expected?"]]},
+  tension:{pri:2, cd:90, src:'face', sig:'face tightened', casual:[["Their face tightened.","Ask if everything's okay."]], sales:[["Their face tightened.","What's your concern there?"],["Brows pulled in.","Does that part make sense?"]]},
+  low:{pri:2, cd:120, src:'face', sig:'energy dipped', casual:[["Their energy dipped.","Switch to something they enjoy."]], sales:[["Energy dipped.","How does that sit with you?"]]},
+  nod:{pri:1, cd:120, src:'face', sig:'nodding', casual:[["Nodding along.","Pause and let them add their take."]], sales:[["Nodding along.","Check it landed before moving on."]]},
+  shake:{pri:2, cd:90, src:'face', sig:'small head shake', casual:[["A small head shake.","Ask what they see differently."]], sales:[["A small head shake.","Which part doesn't fit?"]]},
+  lookAway:{pri:1, cd:120, src:'face', sig:'looked away', lines:[["Their attention drifted.","Ask them a question."]]},
+  longTalk:{pri:1, cd:120, src:'face', casual:[["You've talked a while.","Ask what they think."]], sales:[["Long stretch on your side.","How does that land for you?"]]},
+  tryEnter:{pri:2, cd:40, src:'face', lines:[["They want to jump in.","Pause and let them talk."]]},
+  yourTurn:{pri:1, cd:60, src:'face', casual:[["They finished their thought.","Respond, then ask one back."]], sales:[["They paused for you.","Reply, then ask what matters most to them."]]},
   // from words
-  wQuestion:{pri:2.5, cd:25, lines:[["They asked: “{q}”","Answer that first, then check it landed."],["Question on the table: “{q}”","Give a short answer, then ask if that helps."]]},
-  wPrice:{pri:2.5, cd:60, lines:[["Price came up: “{q}”","Anchor on the value first, then the number."],["Money is on their mind: “{q}”","What budget are you working with?"]]},
-  wUnsure:{pri:2.5, cd:50, lines:[["They sound unsure: “{q}”","What would make this an easy yes?"],["Hesitation: “{q}”","What's holding you back?"]]},
-  wTiming:{pri:2.5, cd:60, lines:[["Timing came up: “{q}”","When would be the right time to start?"]]},
-  wCurrent:{pri:2.5, cd:60, lines:[["They named what they use now: “{q}”","What would you change about it?"]]},
-  wOthers:{pri:2.5, cd:60, lines:[["Someone else is in the decision: “{q}”","Who else should we bring in?"]]},
-  wPain:{pri:2.5, cd:45, lines:[["A pain point: “{q}”","Tell me more about that."],["That sounds like a problem for them: “{q}”","How is that affecting you today?"]]},
-  wYes:{pri:2.5, cd:45, lines:[["A yes signal: “{q}”","Name the next step and a date."],["They're leaning in: “{q}”","Ask for the next step now."]]},
-  wName:{pri:3, lines:[["Got their name: {name}.","Use it once in your next line."]]},
-  claude:{pri:2.6, lines:[["{o}","{g}"]]},
-  wNoQ:{pri:1, cd:150, lines:[["No questions from you in a while.","Ask what matters most to them."]]},
-  yourTurn:{pri:1, cd:40, lines:[["They finished their thought.","Answer, then ask one back."],["They paused for you.","Reply, then ask what matters most to them."]]},
+  wQuestion:{pri:2.5, cd:20, src:'words', lines:[["They asked: “{q}”","Answer that first, then ask one back."],["Question for you: “{q}”","Give a short answer, then ask theirs."]]},
+  wSaid:{pri:2.4, cd:35, src:'words', casual:[["They said: “{q}”","Ask them more about that."],["You heard: “{q}”","Pick up on that and ask why."]], sales:[["They said: “{q}”","Ask what's behind that."]]},
+  // casual
+  wLike:{pri:2.5, cd:35, src:'words', lines:[["They lit up: “{q}”","Ask what they love about it."],["Something they enjoy: “{q}”","Ask how they got into it."]]},
+  wStory:{pri:2.5, cd:40, src:'words', lines:[["They're telling a story: “{q}”","Let them finish, then ask what happened next."]]},
+  wPlan:{pri:2.5, cd:45, src:'words', lines:[["They have a plan: “{q}”","Ask what they're looking forward to."]]},
+  wFeel:{pri:2.5, cd:45, src:'words', lines:[["Sounds like a lot: “{q}”","Ask how they're doing with it."]]},
+  wView:{pri:2.5, cd:40, src:'words', lines:[["They shared a view: “{q}”","Ask what made them see it that way."]]},
+  wMaybe:{pri:2.5, cd:45, src:'words', lines:[["They're unsure: “{q}”","Give them room. Ask what they'd pick."]]},
+  wAgree:{pri:2.5, cd:45, src:'words', lines:[["They're in: “{q}”","Pin down a time to do it."]]},
+  // sales
+  wPrice:{pri:2.5, cd:60, src:'words', lines:[["Price came up: “{q}”","Anchor on the value first, then the number."],["Money is on their mind: “{q}”","What budget are you working with?"]]},
+  wUnsure:{pri:2.5, cd:50, src:'words', lines:[["They sound unsure: “{q}”","What would make this an easy yes?"],["Hesitation: “{q}”","What's holding you back?"]]},
+  wTiming:{pri:2.5, cd:60, src:'words', lines:[["Timing came up: “{q}”","When would be the right time to start?"]]},
+  wCurrent:{pri:2.5, cd:60, src:'words', lines:[["They named what they use now: “{q}”","What would you change about it?"]]},
+  wOthers:{pri:2.5, cd:60, src:'words', lines:[["Someone else is in the decision: “{q}”","Who else should we bring in?"]]},
+  wPain:{pri:2.5, cd:45, src:'words', lines:[["A pain point: “{q}”","Tell me more about that."],["That sounds like a problem for them: “{q}”","How is that affecting you today?"]]},
+  wYes:{pri:2.5, cd:45, src:'words', lines:[["A yes signal: “{q}”","Name the next step and a date."],["They're leaning in: “{q}”","Ask for the next step now."]]},
+  wName:{pri:3, src:'words', lines:[["Got their name: {name}.","Use it once in your next line."]]},
+  claude:{pri:2.6, src:'words', lines:[["{o}","{g}"]]},
+  wNoQ:{pri:1, cd:150, src:'words', casual:[["No questions from you in a while.","Ask about something they mentioned."]], sales:[["No questions from you in a while.","Ask what matters most to them."]]},
 };
+const RULES_CASUAL = [
+  ['wAgree', /\b(sounds (good|great|fun)|let'?s do (it|that|this)|i'?m in|count me in|for sure|definitely|deal)\b/i],
+  ['wLike', /\b(i (really )?love|love (it|that|this)|so (fun|good|cool)|awesome|amazing|my favou?rite|i'?m (really |so )?into|obsessed|can'?t wait|the best)\b/i],
+  ['wFeel', /\b(tired|exhausted|stressed|rough|tough|worried|sick|sore|hurt|annoy\w*|frustrat\w*|crazy week|long day)\b/i],
+  ['wPlan', /\b(going to|gonna|planning|plan to|next (week|weekend|month)|this weekend|trip|vacation|tomorrow|tonight)\b/i],
+  ['wStory', /\b(i went|we went|last (week|weekend|night|time|year)|yesterday|this morning|i was|we were|i just|guess what|you know what happened)\b/i],
+  ['wView', /\b(i think|i feel like|i believe|in my opinion|the thing is|to be fair|personally)\b/i],
+  ['wMaybe', /\b(not sure|i don'?t know|maybe|we'?ll see|i guess|hard to say|depends)\b/i],
+];
+
 const MIN_HOLD = 8000, ID_HOLD = 3500, IDLE_AFTER = 24000;
 const LOG = [];
 function logLine(obs, sug, who){
@@ -378,20 +407,25 @@ function renderFeed(){
   fitCard();
 }
 
-function cue(id, person, vars){
+function cue(id, person, vars, force){
   const def = CUES[id]; if (!def) return;
   const t = now();
   const p = person || S.current;
   const cdm = p ? p.cueAt : C.cueAt;
+  if (def.src === 'face'){
+    if (def.sig) S.lastFace = {label: def.sig, t};
+    if (!force && !faceMayShow(id, t)) return;
+  }
   if (def.cd){ const last = cdm[id] || -1e9; if (t - last < def.cd*1000) return; }
-  const soft = C.id === 'none' || C.id === 'idle' || !C.id;
+  const lines = def[ctxNow()] || def.lines; if (!lines) return;
+  const soft = C.id === 'none' || C.id === 'idle' || !C.id || (def.src === 'words' && (CUES[C.id] || {}).src === 'face');
   const hold = def.pri >= 3 ? ID_HOLD : MIN_HOLD;
   if (!soft && t - C.shownAt < hold){
     if (!C.queue || def.pri >= (CUES[C.queue.id] || {pri:0}).pri) C.queue = {id, person:p, at:t, vars};
     return;
   }
   cdm[id] = t;
-  let line = def.lines.length > 1 && p && p.lastLine ? pick(def.lines.filter(l => l !== p.lastLine)) : pick(def.lines);
+  let line = lines.length > 1 && p && p.lastLine ? pick(lines.filter(l => l !== p.lastLine)) : pick(lines);
   if (p) p.lastLine = line;
   const name = p ? p.name : '';
   const fill = x => x.replace(/\{(\w+)\}/g, (m, k) => k === 'name' ? name : ((vars && vars[k]) || ''));
@@ -399,6 +433,17 @@ function cue(id, person, vars){
   showLine(o, g, {paused: id === 'none'});
   if (id !== 'none') logLine(o, g, name);
   C.shownAt = t; C.pri = def.pri; C.id = id; C.queue = null;
+  if (def.src === 'words') C.wordsAt = t;
+  if (def.src === 'face') C.faceAt = t;
+}
+// speech leads: a face-only nudge shows only when nothing has been said for a while,
+// no word nudge is up, and no other face nudge has shown in the last 45 seconds
+function ctxNow(){ return S.mode === 'demo' ? 'sales' : S.ctx; }
+function faceMayShow(id, t){
+  if (id === 'tryEnter') return t - (C.faceAt || -1e9) > 20000;
+  const talkAt = Math.max(WD.lastResultAt || 0, C.wordsAt || 0);
+  if (S.words && talkAt && t - talkAt < 30000) return false;
+  return t - (C.faceAt || -1e9) > 45000;
 }
 function cardTick(){
   const t = now();
@@ -723,6 +768,7 @@ function onWords(text){
   showHeard(text, who === 'me' ? 'you' : who === 'them' && S.current ? S.current.name : 'room');
   syncWords();
   if (who === 'me'){
+    if (S.mode === 'live' && claudeReady()) askClaude(S.current, text);
     if (questionOf(text)){ WD.myQAt = t; WD.myWords = 0; return; }
     WD.myWords += text.split(/\s+/).length;
     if (WD.myQAt && t - WD.myQAt > 120000 && WD.myWords > 120){ WD.myQAt = t; WD.myWords = 0; cue('wNoQ'); }
@@ -742,7 +788,8 @@ function readWords(text, p){
 function localWords(text, p){
   const q = questionOf(text);
   if (q && q.split(/\s+/).length >= 3){ cue('wQuestion', p, {q: clip(q)}); return; }
-  for (const [id, re] of RULES){ const m = text.match(re); if (m){ cue(id, p, {q: snip(text, m.index)}); return; } }
+  for (const [id, re] of (ctxNow() === 'sales' ? RULES : RULES_CASUAL)){ const m = text.match(re); if (m){ cue(id, p, {q: snip(text, m.index)}); return; } }
+  if (text.split(/\s+/).length >= 6) cue('wSaid', p, {q: snip(text, text.length)});
 }
 // a result can sit unfinished on iPhone, so a phrase that stops changing for 1.5s is read too
 function takeResult(i, txt, final){
@@ -816,7 +863,7 @@ function askClaude(p, text){
   CL.busy = true; CL.lastAt = t;
   const lines = WD.lines.filter(l => t - l.t < 90000).map(l => ({who: l.who, text: l.text}));
   const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 8000);
-  fetch(READER_URL, {method:'POST', signal: ctl.signal, headers:{'content-type':'application/json', 'x-glass-pass': store.get('pass', '')}, body: JSON.stringify({lines})})
+  fetch(READER_URL, {method:'POST', signal: ctl.signal, headers:{'content-type':'application/json', 'x-glass-pass': store.get('pass', '')}, body: JSON.stringify({lines, ctx: ctxNow(), face: S.lastFace && t - S.lastFace.t < 10000 ? S.lastFace.label : ''})})
     .then(async r => {
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw Object.assign(new Error(j.error || 'http'), {code: j.error || ('http ' + r.status)});
@@ -1031,7 +1078,7 @@ async function demoStep(t, dt){
   while (D.step < PLAN.length && el >= PLAN[D.step][0]){
     const [, kind, arg] = PLAN[D.step++];
     if (kind === 'scene'){ D.from = D.scene; D.scene = arg; D.fadeAt = t; }
-    else if (kind === 'cue' && S.current && S.current.demoScene === D.scene) cue(arg, S.current);
+    else if (kind === 'cue' && S.current && S.current.demoScene === D.scene) cue(arg, S.current, null, true);
     else if (kind === 'say' && S.current && S.current.demoScene === D.scene){ showHeard(arg, S.current.name); readWords(arg, S.current); }
     else if (kind === 'loop'){ D.t0 = t; D.step = 0; D.simPerson = {}; forget(true); S.lastFaceAt = t; }
   }
@@ -1056,6 +1103,7 @@ async function demoStep(t, dt){
 }
 
 /* ---------------- Controls ---------------- */
+function syncCtx(){ $('ctxSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-checked', b.dataset.ctx === S.ctx)); }
 function syncMic(){ $('micSw').setAttribute('aria-checked', S.mic); $('micBtn').classList.toggle('off', !S.mic); store.set('mic', S.mic); }
 async function toggleMic(){
   S.mic = !S.mic; syncMic();
@@ -1067,7 +1115,7 @@ let wl = null;
 async function wakeLock(){ try{ if ('wakeLock' in navigator && document.visibilityState === 'visible') wl = await navigator.wakeLock.request('screen'); }catch(e){} }
 
 /* ---------------- Version check ---------------- */
-const BUILD = '2026-11-15.0908';
+const BUILD = '2026-11-15.1105';
 async function checkVersion(){
   if (BUILD.startsWith('__') || !/^https?:/.test(location.protocol)) return;
   try{
@@ -1305,6 +1353,7 @@ function init(){
   });
   addEventListener('pagehide', () => { stopStream(); stopWords(); S.people = []; });
   $('wordsSw').onclick = toggleWords;
+  syncCtx(); $('ctxSeg').querySelectorAll('button').forEach(b => b.onclick = () => { S.ctx = b.dataset.ctx; store.set('ctx', S.ctx); syncCtx(); toast(S.ctx === 'sales' ? 'Sales mode: nudges for client calls.' : 'Casual mode: nudges for everyday talk.'); });
   $('recBtn').onclick = () => REC.on ? stopRec() : startRec();
   $('clipSave').onclick = saveClip; $('clipDrop').onclick = dropClip; $('clipClose').onclick = () => { $('clip').hidden = true; };
   $('ver').textContent = 'Glass version ' + BUILD;
