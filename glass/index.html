@@ -97,6 +97,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--viola-soft
 .sug:empty{display:none}
 .cap.swap{animation:swap .42s ease}
 @keyframes swap{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.pass{width:132px;padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:#fff;font:inherit;font-size:16px}
 .heard{margin-top:calc(7px * var(--s));font-size:calc(12px * var(--s));line-height:1.3;color:rgba(255,255,255,.62);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:0;transition:opacity .5s;text-shadow:0 1px 3px rgba(0,0,0,.8)}
 .heard.on{opacity:1}
 .heard i{font-style:normal;letter-spacing:.16em;font-size:calc(9px * var(--s));color:var(--ink-3);margin-right:.6em}
@@ -210,7 +211,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--viola-soft
       <div class="note" id="camNote" hidden></div>
       <button class="btn primary" id="startBtn">Start camera</button>
       <button class="btn ghost" id="demoBtn">Watch the demo</button>
-      <div class="fine">Faces, sound and words are read on this phone. Nerovion records, saves and sends nothing. iPhone speech-to-text may use Apple’s servers.</div>
+      <div class="fine">Faces, sound and words are read on this phone and nothing is saved. Words leave the phone only if you turn on the Claude reader. iPhone speech-to-text may use Apple’s servers.</div>
       <div class="fine" id="a2hs" hidden>To keep it on your home screen: Share, then Add to Home Screen.</div>
     </div>
   </div>
@@ -220,8 +221,12 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--viola-soft
       <div class="sheet-h"><h2>Nerovion Glass</h2><button class="link" id="closeMore">Done</button></div>
       <div class="row"><div class="lab"><b>Sound reading</b><small>Uses loudness only, to tell when you're talking and when they're done. Words have their own switch below.</small></div>
         <button class="sw" id="micSw" role="switch" aria-checked="true" aria-label="Sound reading"><span class="t"></span></button></div>
-      <div class="row"><div class="lab"><b>Words</b><small>Your phone turns speech into words so nudges follow what's said. iPhone may use Apple's servers to do this. Nerovion never saves or sends the words. <span id="wordsStatus"></span></small></div>
+      <div class="row"><div class="lab"><b>Words</b><small>Your phone turns speech into words so nudges follow what's said. iPhone may use Apple's servers to do this. Nerovion saves nothing, and words leave the phone only when the Claude reader is on. <span id="wordsStatus"></span></small></div>
         <button class="sw" id="wordsSw" role="switch" aria-checked="true" aria-label="Words"><span class="t"></span></button></div>
+      <div class="row"><div class="lab"><b>Claude reader</b><small>Sends the last few lines of words, as text only, to Nerovion’s server and Claude for sharper nudges. No audio, nothing stored. Use it on your own calls, never client calls. <span id="claudeStatus"></span></small></div>
+        <button class="sw" id="claudeSw" role="switch" aria-checked="false" aria-label="Claude reader"><span class="t"></span></button></div>
+      <div class="row" id="passRow" hidden><div class="lab"><b>Reader passcode</b><small>The passcode set on Nerovion’s server. Kept on this phone only.</small></div>
+        <input id="passIn" class="pass" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Passcode" aria-label="Reader passcode"></div>
       <div class="row"><div class="lab"><b>Clean view</b><small>On: glass card with the latest nudge. Off: solid card with earlier nudges you can scroll.</small></div>
         <button class="sw" id="cleanSw2" role="switch" aria-checked="true" aria-label="Clean view"><span class="t"></span></button></div>
       <div>
@@ -270,6 +275,7 @@ const S = {
   running: false,
   mic: store.get('mic', true),
   words: store.get('words', true),
+  claude: store.get('claude', false),
   audio: null,
   demo: null,
 };
@@ -317,6 +323,7 @@ const CUES = {
   wPain:{pri:2.5, cd:45, lines:[["A pain point: “{q}”","Tell me more about that."],["That sounds like a problem for them: “{q}”","How is that affecting you today?"]]},
   wYes:{pri:2.5, cd:45, lines:[["A yes signal: “{q}”","Name the next step and a date."],["They're leaning in: “{q}”","Ask for the next step now."]]},
   wName:{pri:3, lines:[["Got their name: {name}.","Use it once in your next line."]]},
+  claude:{pri:2.6, lines:[["{o}","{g}"]]},
   wNoQ:{pri:1, cd:150, lines:[["No questions from you in a while.","Ask what matters most to them."]]},
   yourTurn:{pri:1, cd:40, lines:[["They finished their thought.","Answer, then ask one back."],["They paused for you.","Reply, then ask what matters most to them."]]},
 };
@@ -642,7 +649,7 @@ function talkBalance(p, theyTalk, voice, t, dt){
 
 /* words: the phone's own speech-to-text, read by simple rules here. Nothing is kept or sent by this page. */
 const SRC = window.SpeechRecognition || window.webkitSpeechRecognition;
-const WD = {rec:null, status:'', fails:0, blocked:false, done:new Map(), pend:null, myQAt:0, myWords:0, heardT:0};
+const WD = {lines:[], rec:null, status:'', fails:0, blocked:false, done:new Map(), pend:null, myQAt:0, myWords:0, heardT:0};
 const QSTART = /\b(what|how|why|when|where|who|which|can you|could you|would you|will you|do you|does (it|that|this)|is (it|that|there)|are (you|there|we)|should (we|i))\b/i;
 const NAME_RE = /\b(?:my name is|my name's|call me|this is)\s+([A-Z][a-z]{1,15})\b/;
 const RULES = [
@@ -683,6 +690,7 @@ function showHeard(text){
 function onWords(text){
   text = (text || '').trim(); if (!text) return;
   const t = now(), who = speaker();
+  WD.lines.push({who: who === 'me' ? 'ME' : who === 'them' ? 'THEM' : 'ROOM', text, t}); if (WD.lines.length > 8) WD.lines.shift();
   if (who === 'me'){
     if (questionOf(text)){ WD.myQAt = t; WD.myWords = 0; return; }
     WD.myWords += text.split(/\s+/).length;
@@ -697,6 +705,10 @@ function readWords(text, p){
     p.name = nm[1]; renderPeople(); if (S.current === p) setPill('face', p.name);
     cue('wName', p); return;
   }
+  if (S.mode === 'live' && claudeReady()){ askClaude(p, text); return; }
+  localWords(text, p);
+}
+function localWords(text, p){
   const q = questionOf(text);
   if (q && q.split(/\s+/).length >= 3){ cue('wQuestion', p, {q: clip(q)}); return; }
   for (const [id, re] of RULES){ const m = text.match(re); if (m){ cue(id, p, {q: snip(text, m.index)}); return; } }
@@ -747,6 +759,50 @@ function toggleWords(){
   if (S.words) startWords(); else { stopWords(); $('heard').classList.remove('on'); }
   syncWords();
   toast(S.words ? 'Words on. Nudges follow what’s said.' : 'Words off.');
+}
+
+/* Claude reader: sends recent lines as text to Nerovion's server, which holds the key. Off unless switched on. */
+const READER_URL = 'https://ahpwkzbzufobabjgeujn.supabase.co/functions/v1/glass-reader';
+const CL = {busy:false, lastAt:-1e9, backoffUntil:0, pend:null, timer:0, status:''};
+function claudeReady(){ return S.claude && !!store.get('pass', '') && now() > CL.backoffUntil; }
+function askClaude(p, text){
+  const t = now();
+  if (CL.busy || t - CL.lastAt < 9000){
+    CL.pend = {p, text}; clearTimeout(CL.timer);
+    CL.timer = setTimeout(() => { const q = CL.pend; CL.pend = null; if (q && claudeReady()) askClaude(q.p, q.text); }, Math.max(500, 9000 - (t - CL.lastAt)));
+    return;
+  }
+  CL.busy = true; CL.lastAt = t;
+  const lines = WD.lines.filter(l => t - l.t < 90000).map(l => ({who: l.who, text: l.text}));
+  const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 8000);
+  fetch(READER_URL, {method:'POST', signal: ctl.signal, headers:{'content-type':'application/json', 'x-glass-pass': store.get('pass', '')}, body: JSON.stringify({lines})})
+    .then(async r => {
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw Object.assign(new Error(j.error || 'http'), {code: j.error || ('http ' + r.status)});
+      setClaudeStatus('working');
+      if (j.obs && (p === S.current || !p)) cue('claude', p, {o: j.obs, g: j.sug || ''});
+    })
+    .catch(e => {
+      const c = e.code || (e.name === 'AbortError' ? 'slow' : 'offline');
+      const msg = {passcode:'passcode does not match the server', locked:'locked for 10 minutes after wrong passcodes', not_set_up:'the server key or passcode is not added yet', rate:'too many reads, resting a minute', upstream:'Claude did not answer', slow:'the server was slow', offline:'the server is not reachable, it may be paused'}[c] || ('error, ' + c);
+      setClaudeStatus(msg + '. Using on-phone rules');
+      CL.backoffUntil = now() + (c === 'passcode' || c === 'not_set_up' || c === 'offline' ? 120000 : 45000);
+      localWords(text, p);
+    })
+    .finally(() => { clearTimeout(to); CL.busy = false; });
+}
+function setClaudeStatus(m){ CL.status = m; syncClaude(); }
+function syncClaude(){
+  $('claudeSw').setAttribute('aria-checked', S.claude); store.set('claude', S.claude);
+  $('passRow').hidden = !S.claude;
+  const need = S.claude && !store.get('pass', '');
+  $('claudeStatus').textContent = !S.claude ? '' : need ? 'Now: add the passcode below.' : CL.status ? 'Now: ' + CL.status + '.' : 'Now: ready.';
+}
+function toggleClaude(){
+  S.claude = !S.claude; CL.backoffUntil = 0; CL.status = '';
+  if (S.claude && !S.words){ S.words = true; syncWords(); startWords(); }
+  syncClaude();
+  toast(S.claude ? 'Claude reader on. Recent words go to Claude as text.' : 'Claude reader off. Words stay on the phone.');
 }
 
 /* ---------------- Drawing ---------------- */
@@ -971,7 +1027,7 @@ async function wakeLock(){ try{ if ('wakeLock' in navigator && document.visibili
 
 function init(){
   setClean(store.get('clean', true));
-  syncMic(); syncWords(); fitOverlay(); bindDrag();
+  syncMic(); syncWords(); syncClaude(); fitOverlay(); bindDrag();
   addEventListener('resize', fitOverlay);
   $('startBtn').onclick = startLive;
   $('demoBtn').onclick = startDemo;
@@ -991,6 +1047,9 @@ function init(){
   });
   addEventListener('pagehide', () => { stopStream(); stopWords(); S.people = []; });
   $('wordsSw').onclick = toggleWords;
+  $('claudeSw').onclick = toggleClaude;
+  $('passIn').value = store.get('pass', '');
+  $('passIn').addEventListener('change', () => { store.set('pass', $('passIn').value.trim()); CL.backoffUntil = 0; CL.status = ''; syncClaude(); });
   // Safari may only start listening from a tap, so the first tap starts it if it isn't running
   document.addEventListener('pointerdown', () => { if (S.mode === 'live' && S.words && !WD.rec) { WD.blocked = false; startWords(); } }, true);
   setTimeout(() => { if (!new URLSearchParams(location.search).has('nopreload')) loadModels(); }, 400);
