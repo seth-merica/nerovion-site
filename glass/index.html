@@ -211,6 +211,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--viola-soft
         <div class="ph">PEOPLE THIS SESSION</div>
         <div class="people" id="people" style="margin-top:10px"><span class="chip">No one yet</span></div>
       </div>
+      <div class="row"><div class="lab"><b>Face tool</b><small id="faceStatus">Not started</small></div></div>
       <div class="row"><div class="lab"><b>Forget everyone</b><small>Clears every face from this session. Closing the page does the same.</small></div>
         <button class="link" id="forgetBtn">Forget</button></div>
       <div class="row"><div class="lab"><b>Card position</b><small>Drag the card by its header. Pull the corner to resize.</small></div>
@@ -388,7 +389,11 @@ async function loadModels(){
       };
       window.fetch = window.__nvgFetch;
     }
-    try{ await fa.tf.setBackend('webgl'); }catch(e){}
+    const want = new URLSearchParams(location.search).get('backend');
+    if (want !== 'cpu'){
+      try{ fa.tf.env().set('WEBGL_FORCE_F16_TEXTURES', false); }catch(e){}
+      try{ await fa.tf.setBackend('webgl'); }catch(e){}
+    } else await fa.tf.setBackend('cpu');
     await fa.tf.ready();
     const base = 'models';
     await Promise.all([
@@ -397,10 +402,43 @@ async function loadModels(){
       fa.nets.faceExpressionNet.loadFromUri(base),
       fa.nets.faceRecognitionNet.loadFromUri(base),
     ]);
-    S.models = true;
-  }catch(e){ console.warn('face tool unavailable', e); S.models = false; }
+    /* Self-test on a known face. Some phones' GPU path returns nothing; fall back to the CPU path then. */
+    let n = await selfTest(fa);
+    if (!n && fa.tf.getBackend() !== 'cpu'){
+      await fa.tf.setBackend('cpu'); await fa.tf.ready();
+      n = await selfTest(fa);
+    }
+    S.backend = fa.tf.getBackend(); S.selfTest = n;
+    S.models = n > 0;
+    if (!S.models) S.modelErr = 'self-test found no face';
+  }catch(e){ console.warn('face tool unavailable', e); S.models = false; S.modelErr = String(e && e.message || e).slice(0, 80); }
+  syncFaceStatus();
   $('loading').hidden = true;
   return S.models;
+}
+
+async function selfTest(fa){
+  try{
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = 'demo/p1.jpg'; });
+    const c = document.createElement('canvas'); c.width = 360; c.height = Math.round(img.height * 360 / img.width);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    const d = await fa.detectAllFaces(c, new fa.TinyFaceDetectorOptions({inputSize: 320, scoreThreshold: 0.4}));
+    return d.length;
+  }catch(e){ console.warn('self-test', e); return 0; }
+}
+function syncFaceStatus(){
+  const el = $('faceStatus'); if (!el) return;
+  el.textContent = S.models ? ('Ready' + (S.backend === 'cpu' ? ', running on the phone’s processor' : ', running on the phone’s graphics chip'))
+    : (S.modelsTried ? 'Did not start (' + (S.modelErr || 'unknown') + ')' : 'Not started');
+}
+/* Copy each camera frame to a small canvas first; iPhone Safari can hand the face tool a blank frame from the video directly. */
+const grab = document.createElement('canvas'), gctx = grab.getContext('2d', {willReadFrequently: true});
+function frameFrom(v){
+  const k = Math.min(1, 640 / Math.max(v.videoWidth, v.videoHeight));
+  const w = Math.round(v.videoWidth * k), h = Math.round(v.videoHeight * k);
+  if (grab.width !== w || grab.height !== h){ grab.width = w; grab.height = h; }
+  gctx.drawImage(v, 0, 0, w, h);
+  return grab;
 }
 
 const SAME = 0.5, NEW = 0.56, NONE_AFTER = 2200;
@@ -575,7 +613,7 @@ async function loop(){
 
 async function analyze(src, sw, sh, t, dt, mirror){
   const fa = window.faceapi;
-  const dets = await fa.detectAllFaces(src, new fa.TinyFaceDetectorOptions({inputSize: 320, scoreThreshold: 0.45}))
+  const dets = await fa.detectAllFaces(src, new fa.TinyFaceDetectorOptions({inputSize: 320, scoreThreshold: 0.4}))
     .withFaceLandmarks(true).withFaceExpressions();
   const voice = readLoudness();
   if (!dets.length){
@@ -605,7 +643,8 @@ async function analyze(src, sw, sh, t, dt, mirror){
 async function liveStep(t, dt){
   const v = $('cam'); if (v.readyState < 2 || !v.videoWidth) return;
   if (!S.models) return;
-  await analyze(v, v.videoWidth, v.videoHeight, t, dt, S.facing === 'user');
+  const f = frameFrom(v);
+  await analyze(f, f.width, f.height, t, dt, S.facing === 'user');
 }
 
 /* ---------------- Live camera ---------------- */
