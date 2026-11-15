@@ -1,0 +1,771 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Nerovion Glass">
+<meta name="theme-color" content="#130D22">
+<meta name="robots" content="noindex,nofollow">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>body{margin:0}</style>
+</head><body>
+<title>Nerovion Glass</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,500&display=swap">
+<style>
+/* Layout: full-bleed camera, thin control rail on top, one draggable Glass card over the lower third. Single dark look on purpose. */
+:root{
+  --deep:#130D22;          /* Nerovion purple */
+  --viola:#A72D91;
+  --viola-soft:#D66BC2;    /* second tone of the wordmark */
+  --orange:#ED7D1B;
+  --ink:#FFFFFF;
+  --ink-2:rgba(255,255,255,.74);
+  --ink-3:rgba(255,255,255,.5);
+  --hair:rgba(190,90,175,.85);
+  --glass:rgba(255,255,255,.02);
+  --veil:rgba(19,13,34,.72);
+  --sans:'DM Sans',ui-sans-serif,-apple-system,'Helvetica Neue',Arial,sans-serif;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%;background:#000;color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow:hidden;overscroll-behavior:none}
+*{box-sizing:border-box}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--viola-soft);outline-offset:3px;border-radius:10px}
+
+#app{position:fixed;inset:0;background:#000;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+#stage{position:absolute;inset:0}
+#cam,#scene,#overlay{position:absolute;inset:0;width:100%;height:100%}
+#cam{object-fit:cover;background:#000}
+#cam.mirror{transform:scaleX(-1)}
+#scene{display:block}
+#overlay{pointer-events:none}
+#stage.drift{animation:drift 14s ease-in-out infinite alternate}
+@keyframes drift{from{transform:scale(1.02) translate(0,0)}to{transform:scale(1.06) translate(-1%,-.6%)}}
+
+/* top rail */
+.rail{position:absolute;left:0;right:0;top:0;display:flex;align-items:center;gap:10px;
+  padding:calc(env(safe-area-inset-top,0px) + 10px) max(14px,env(safe-area-inset-right,0px)) 10px max(14px,env(safe-area-inset-left,0px));
+  background:linear-gradient(180deg,rgba(0,0,0,.45),rgba(0,0,0,0));z-index:5}
+.pill{display:flex;align-items:center;gap:8px;height:32px;padding:0 12px 0 10px;border-radius:16px;
+  background:rgba(19,13,34,.55);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:.5px solid rgba(255,255,255,.14);
+  font-size:13px;font-weight:500;letter-spacing:.01em;white-space:nowrap}
+.pill i{width:8px;height:8px;border-radius:50%;background:var(--ink-3);flex:none;transition:background .3s}
+.pill[data-s="face"] i{background:var(--viola-soft);box-shadow:0 0 0 3px rgba(214,107,194,.22)}
+.pill[data-s="new"] i{background:var(--orange);box-shadow:0 0 0 3px rgba(237,125,27,.25)}
+.pill .tag{font-size:10px;letter-spacing:.16em;color:var(--orange);margin-left:2px}
+.rail .sp{flex:1}
+.ib{width:36px;height:36px;border-radius:18px;display:grid;place-items:center;
+  background:rgba(19,13,34,.55);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:.5px solid rgba(255,255,255,.14)}
+.ib svg{width:18px;height:18px;fill:none;stroke:#fff;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.ib.off svg{opacity:.45}
+.ib .lvl{position:absolute}
+#micBtn{position:relative;overflow:hidden}
+#micBtn .meter{position:absolute;left:0;right:0;bottom:0;height:0;background:rgba(214,107,194,.35);transition:height .08s}
+
+/* Glass card */
+.card{position:absolute;left:12px;top:60%;width:min(360px,calc(100vw - 24px));z-index:6;
+  --s:1;border-radius:calc(16px * var(--s));padding:calc(11px * var(--s)) calc(16px * var(--s)) calc(15px * var(--s));
+  touch-action:none;transition:opacity .45s ease, background .3s, border-color .3s}
+.card.clean{background:var(--glass);-webkit-backdrop-filter:blur(1.5px);backdrop-filter:blur(1.5px);border:.5px solid var(--hair)}
+.card.solid{background:linear-gradient(180deg,#221a3a,#1a1430);border:1px solid rgba(255,255,255,.08);box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden}
+.card.solid::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,var(--viola),var(--orange))}
+.card.quiet .cap{opacity:.55}
+.card.paused{opacity:.62}
+.chd{display:flex;align-items:center;gap:calc(7px * var(--s));cursor:grab}
+.chd img{width:calc(17px * var(--s));height:calc(17px * var(--s));filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
+.wm{font-weight:700;font-size:calc(14px * var(--s));letter-spacing:.01em;text-shadow:0 1px 3px rgba(0,0,0,.7)}
+.wm b{font-weight:700;color:#fff}.wm span{color:var(--viola-soft)}
+.chd .sp{flex:1}
+.demo-tag{font-size:calc(9.5px * var(--s));letter-spacing:.18em;color:var(--orange);text-shadow:0 1px 3px rgba(0,0,0,.7)}
+.sw{display:flex;align-items:center;gap:6px;font-size:calc(9.5px * var(--s));letter-spacing:.16em;color:var(--ink-2);text-shadow:0 1px 3px rgba(0,0,0,.7)}
+.sw .t{width:calc(26px * var(--s));height:calc(15px * var(--s));border-radius:10px;background:rgba(255,255,255,.18);position:relative;transition:background .2s}
+.sw .t::after{content:"";position:absolute;left:2px;top:2px;width:calc(11px * var(--s));height:calc(11px * var(--s));border-radius:50%;background:#e8e2f2;transition:left .2s}
+.sw[aria-checked="true"] .t{background:var(--viola)}
+.sw[aria-checked="true"] .t::after{left:calc(100% - 2px - 11px * var(--s));background:#fff}
+.cap{margin-top:calc(8px * var(--s));transition:opacity .35s}
+.obs,.sug{text-shadow:0 0 1px rgba(0,0,0,.9),0 1px 3px rgba(0,0,0,.85),0 0 14px rgba(0,0,0,.45)}
+.card.solid .obs,.card.solid .sug{text-shadow:none}
+.obs{font-size:calc(20px * var(--s));line-height:1.28;font-weight:500;letter-spacing:-.005em;text-wrap:balance}
+.sug{margin-top:calc(4px * var(--s));font-size:calc(15.5px * var(--s));line-height:1.35;font-weight:500;color:rgba(255,255,255,.92);text-wrap:balance}
+.sug em{font-style:normal;color:#f2b3e6;margin-right:.3em}
+.sug:empty{display:none}
+.cap.swap{animation:swap .42s ease}
+@keyframes swap{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.grip{position:absolute;right:2px;bottom:2px;width:26px;height:26px;cursor:nwse-resize;touch-action:none}
+.grip::after{content:"";position:absolute;right:7px;bottom:7px;width:8px;height:8px;border-right:1.5px solid rgba(255,255,255,.55);border-bottom:1.5px solid rgba(255,255,255,.55);border-bottom-right-radius:2px}
+
+/* sheets */
+.sheet{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(0,0,0,.35)}
+.panel{background:linear-gradient(180deg,rgba(32,22,56,.94),rgba(19,13,34,.98));-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);
+  border-top:.5px solid rgba(214,107,194,.5);border-radius:22px 22px 0 0;
+  padding:22px max(20px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 22px) max(20px,env(safe-area-inset-left,0px));
+  display:flex;flex-direction:column;gap:16px;max-height:88%;overflow:auto;touch-action:pan-y}
+
+#start{background:radial-gradient(120% 70% at 50% 0%,#2a1a44 0%,var(--deep) 55%,#0b0714 100%);justify-content:space-between}
+.hero{padding:calc(env(safe-area-inset-top,0px) + 56px) max(24px,env(safe-area-inset-right,0px)) 0 max(24px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:18px}
+.hero .mark{display:flex;align-items:center;gap:12px}
+.hero .mark img{width:40px;height:40px}
+.hero .mark .wm{font-size:30px}
+.hero .wm em{font-style:normal;font-weight:400;color:var(--ink-2);margin-left:.25em}
+.hero h1{margin:0;font-size:30px;line-height:1.15;font-weight:500;letter-spacing:-.015em;text-wrap:balance;max-width:16ch}
+.hero p{margin:0;color:var(--ink-2);font-size:15.5px;line-height:1.5;max-width:34ch}
+.preview{position:relative;margin:4px max(24px,env(safe-area-inset-right,0px)) 0 max(24px,env(safe-area-inset-left,0px));border-radius:18px;padding:12px 16px 15px;border:.5px solid var(--hair);background:rgba(255,255,255,.03)}
+.preview .obs{font-size:18px}.preview .sug{font-size:14.5px}
+.preview .chd{cursor:default}
+.actions{padding:0 max(24px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 26px) max(24px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:12px}
+.btn{height:52px;border-radius:26px;font-size:16px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:10px}
+.btn.primary{background:linear-gradient(90deg,var(--viola),#c2449f);box-shadow:0 10px 30px rgba(167,45,145,.35)}
+.btn.ghost{border:.5px solid rgba(255,255,255,.3);background:rgba(255,255,255,.04)}
+.btn[disabled]{opacity:.6}
+.fine{font-size:12.5px;line-height:1.5;color:var(--ink-3);text-align:center;text-wrap:balance}
+.note{font-size:13.5px;line-height:1.45;color:#ffd2a8;background:rgba(237,125,27,.12);border:.5px solid rgba(237,125,27,.4);border-radius:12px;padding:10px 12px}
+
+.row{display:flex;align-items:center;gap:12px;min-height:44px}
+.row .lab{flex:1;min-width:0}
+.row .lab b{display:block;font-weight:500;font-size:15px}
+.row .lab small{display:block;color:var(--ink-3);font-size:12.5px;line-height:1.4;margin-top:2px}
+.row .sw .t{width:44px;height:26px;border-radius:13px}
+.row .sw .t::after{width:20px;height:20px;top:3px;left:3px}
+.row .sw[aria-checked="true"] .t::after{left:21px}
+.ph{font-size:11px;letter-spacing:.18em;color:var(--viola-soft);font-weight:500}
+.people{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-size:13px;padding:6px 11px;border-radius:14px;background:rgba(255,255,255,.07);border:.5px solid rgba(255,255,255,.14)}
+.chip.on{border-color:var(--viola-soft)}
+.sheet-h{display:flex;align-items:center}
+.sheet-h h2{margin:0;font-size:18px;font-weight:500;flex:1}
+.link{color:var(--viola-soft);font-size:15px;font-weight:500;min-height:44px;padding:0 4px}
+
+#toast{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 60px);transform:translateX(-50%);z-index:30;
+  background:rgba(19,13,34,.85);border:.5px solid rgba(255,255,255,.16);border-radius:14px;padding:9px 14px;font-size:13.5px;max-width:min(88vw,380px);text-align:center;
+  opacity:0;transition:opacity .3s;pointer-events:none}
+#toast.show{opacity:1}
+#loading{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateX(-50%);z-index:7;font-size:12.5px;color:var(--ink-2);
+  background:rgba(19,13,34,.7);padding:7px 12px;border-radius:12px;white-space:nowrap}
+@media (prefers-reduced-motion:reduce){#stage.drift{animation:none}.cap.swap{animation:none}}
+</style>
+
+<div id="app">
+  <div id="stage">
+    <video id="cam" playsinline muted autoplay hidden></video>
+    <canvas id="scene" hidden></canvas>
+    <canvas id="overlay"></canvas>
+  </div>
+
+  <div class="rail" id="rail" hidden>
+    <div class="pill" id="pill" data-s="none" role="status" aria-live="polite"><i></i><span id="pillText">Looking for a face</span></div>
+    <div class="sp"></div>
+    <button class="ib" id="micBtn" aria-label="Sound reading" title="Sound reading"><span class="meter" id="meter"></span>
+      <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg></button>
+    <button class="ib" id="flipBtn" aria-label="Switch camera" title="Switch camera">
+      <svg viewBox="0 0 24 24"><path d="M4 8.5h2.6L8.3 6h7.4l1.7 2.5H20v10H4z"/><path d="M9.2 13.4a2.9 2.9 0 0 1 5-1.9M14.8 13.6a2.9 2.9 0 0 1-5 1.9"/><path d="M14.4 10.2v1.5h-1.5M9.6 16.8v-1.5h1.5"/></svg></button>
+    <button class="ib" id="moreBtn" aria-label="Settings" title="Settings">
+      <svg viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="18.5" cy="12" r="1.2"/></svg></button>
+  </div>
+
+  <section class="card clean" id="card" hidden aria-live="polite">
+    <div class="chd" id="cardHead">
+      <img alt="" src="logo.png"><span class="wm"><b>Nero</b><span>vion</span></span>
+      <span class="sp"></span>
+      <span class="demo-tag" id="demoTag" hidden>DEMO</span>
+      <button class="sw" id="cleanSw" role="switch" aria-checked="true" aria-label="Clean view">CLEAN<span class="t"></span></button>
+    </div>
+    <div class="cap" id="cap"><div class="obs" id="obs">Reading the room.</div><div class="sug" id="sug"></div></div>
+    <div class="grip" id="grip" aria-hidden="true"></div>
+  </section>
+
+  <div id="loading" hidden>Loading face tool…</div>
+
+  <div class="sheet" id="start">
+    <div class="hero">
+      <div class="mark"><img alt="" src="logo.png"><span class="wm"><b>Nero</b><span>vion</span><em>Glass</em></span></div>
+      <h1>Read the person across from you.</h1>
+      <p>Point the camera at whoever you're talking with. The card reads their face and the room, and follows each person you face.</p>
+    </div>
+    <div class="preview" aria-hidden="true">
+      <div class="chd"><img alt="" src="logo.png"><span class="wm"><b>Nero</b><span>vion</span></span><span class="sp"></span><span class="sw" aria-checked="true">CLEAN<span class="t"></span></span></div>
+      <div class="cap"><div class="obs">They warmed up there.</div><div class="sug"><em>Try:</em>Build on what you just said.</div></div>
+    </div>
+    <div class="actions">
+      <div class="note" id="camNote" hidden></div>
+      <button class="btn primary" id="startBtn">Start camera</button>
+      <button class="btn ghost" id="demoBtn">Watch the demo</button>
+      <div class="fine">Faces and sound are read on this phone. Nothing is recorded, saved or sent.</div>
+      <div class="fine" id="a2hs" hidden>To keep it on your home screen: Share, then Add to Home Screen.</div>
+    </div>
+  </div>
+
+  <div class="sheet" id="more" hidden>
+    <div class="panel" role="dialog" aria-label="Settings">
+      <div class="sheet-h"><h2>Nerovion Glass</h2><button class="link" id="closeMore">Done</button></div>
+      <div class="row"><div class="lab"><b>Sound reading</b><small>Uses loudness only, to tell when you're talking and when they're done. No words are heard or kept.</small></div>
+        <button class="sw" id="micSw" role="switch" aria-checked="true" aria-label="Sound reading"><span class="t"></span></button></div>
+      <div class="row"><div class="lab"><b>Clean view</b><small>Glass card over the camera. Off shows the solid card.</small></div>
+        <button class="sw" id="cleanSw2" role="switch" aria-checked="true" aria-label="Clean view"><span class="t"></span></button></div>
+      <div>
+        <div class="ph">PEOPLE THIS SESSION</div>
+        <div class="people" id="people" style="margin-top:10px"><span class="chip">No one yet</span></div>
+      </div>
+      <div class="row"><div class="lab"><b>Forget everyone</b><small>Clears every face from this session. Closing the page does the same.</small></div>
+        <button class="link" id="forgetBtn">Forget</button></div>
+      <div class="row"><div class="lab"><b>Card position</b><small>Drag the card by its header. Pull the corner to resize.</small></div>
+        <button class="link" id="resetCard">Reset</button></div>
+      <div class="row"><div class="lab"><b id="modeLabel">Live camera</b><small id="modeSmall">Switch between your camera and the demo.</small></div>
+        <button class="link" id="switchMode">Show demo</button></div>
+    </div>
+  </div>
+
+  <div id="toast" role="status"></div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem('nvg.'+k); return v == null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem('nvg.'+k, JSON.stringify(v)); }catch(e){} }
+};
+const now = () => performance.now();
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const pick = a => a[Math.floor(Math.random()*a.length)];
+const SPEED = Math.max(1, +(new URLSearchParams(location.search).get('speed')) || 1);
+
+/* ---------------- State ---------------- */
+const S = {
+  mode: 'idle',          // idle | live | demo
+  facing: 'environment',
+  stream: null,
+  models: false,
+  modelsTried: false,
+  people: [],            // {id,name,samples:[Float32Array],mean,cueAt:{},ema:{},seenAt}
+  current: null,         // person in view
+  track: null,           // {box, lastRecog, person}
+  pending: null,
+  lastFaceAt: 0,
+  noneShown: false,
+  running: false,
+  mic: store.get('mic', true),
+  audio: null,
+  demo: null,
+};
+
+/* ---------------- Card ---------------- */
+const card = $('card'), obsEl = $('obs'), sugEl = $('sug'), capEl = $('cap');
+const C = { shownAt: 0, pri: 0, id: null, queue: null, idleTimer: 0 };
+
+function setClean(on){
+  card.classList.toggle('clean', on); card.classList.toggle('solid', !on);
+  $('cleanSw').setAttribute('aria-checked', on); $('cleanSw2').setAttribute('aria-checked', on);
+  store.set('clean', on);
+}
+function showLine(obs, sug, opts={}){
+  obsEl.textContent = obs;
+  sugEl.innerHTML = '';
+  if (sug){ const em = document.createElement('em'); em.textContent = 'Try:'; sugEl.append(em, document.createTextNode('“'+sug+'”')); }
+  capEl.classList.remove('swap'); void capEl.offsetWidth; capEl.classList.add('swap');
+  card.classList.toggle('quiet', !!opts.quiet);
+  card.classList.toggle('paused', !!opts.paused);
+}
+
+const CUES = {
+  newPerson:{pri:3, lines:[["New face in view.","Open with their name."],["Someone new is with you.","Start with a warm hello."],["A new person just stepped in.","Ask what brought them here."]]},
+  returning:{pri:3, lines:[["Back with {name}.","Pick up where you left off."],["{name} is back in view.","Recap your last point in one line."]]},
+  none:{pri:3, lines:[["No one in view.",""]]},
+  smile:{pri:2, cd:40, lines:[["A smile just came up.","Stay on this point."],["They warmed up there.","Build on what you just said."]]},
+  surprise:{pri:2, cd:40, lines:[["That caught them off guard.","Want me to walk through that?"],["Eyebrows went up.","Was that what you expected?"]]},
+  tension:{pri:2, cd:45, lines:[["Their face tightened.","What's your concern there?"],["Brows pulled in.","Does that part make sense?"]]},
+  low:{pri:2, cd:60, lines:[["Energy dipped.","How does that sit with you?"]]},
+  nod:{pri:1, cd:45, lines:[["Nodding along.","Good moment for the next step."],["Steady nods.","Shall we lock that in?"]]},
+  shake:{pri:2, cd:45, lines:[["A small head shake.","Which part doesn't fit?"]]},
+  lookAway:{pri:1, cd:50, lines:[["Their attention drifted.","Ask them a question."],["Eyes went elsewhere.","Bring them back with their name."]]},
+  longTalk:{pri:1, cd:90, lines:[["Long stretch on your side.","How does that land for you?"],["They've been listening a while.","What's your take?"]]},
+  tryEnter:{pri:2, cd:40, lines:[["They're trying to come in.","Pause and let them in."]]},
+  yourTurn:{pri:1, cd:40, lines:[["They finished their thought.","Answer, then ask one back."],["They paused for you.","Reply, then ask what matters most to them."]]},
+};
+const MIN_HOLD = 5500, IDLE_AFTER = 16000;
+
+function cue(id, person){
+  const def = CUES[id]; if (!def) return;
+  const t = now();
+  const p = person || S.current;
+  if (def.cd && p){ const last = p.cueAt[id] || -1e9; if (t - last < def.cd*1000) return; }
+  if (def.pri < 3 && t - C.shownAt < MIN_HOLD && def.pri <= C.pri && C.id !== 'none'){ C.queue = {id, person:p, at:t}; return; }
+  if (p) p.cueAt[id] = t;
+  let line = def.lines.length > 1 && p && p.lastLine ? pick(def.lines.filter(l => l !== p.lastLine)) : pick(def.lines);
+  if (p) p.lastLine = line;
+  const name = p ? p.name : '';
+  showLine(line[0].replace('{name}', name), line[1].replace('{name}', name), {paused: id === 'none'});
+  C.shownAt = t; C.pri = def.pri; C.id = id; C.queue = null;
+}
+function cardTick(){
+  const t = now();
+  if (C.queue && t - C.shownAt >= MIN_HOLD){
+    const q = C.queue; C.queue = null;
+    if (t - q.at < 6000 && q.person === S.current) { C.pri = 0; cue(q.id, q.person); }
+  }
+  if (C.id && C.id !== 'none' && C.id !== 'idle' && t - C.shownAt > IDLE_AFTER && S.current){
+    showLine('Reading ' + S.current.name + '.', '', {quiet:true}); C.id = 'idle'; C.pri = 0; C.shownAt = t;
+  }
+}
+
+/* drag + resize */
+function placeCard(pos){
+  const W = innerWidth, H = innerHeight;
+  const w = clamp(pos.w || Math.min(360, W-24), 230, W-16);
+  card.style.width = w + 'px';
+  card.style.setProperty('--s', (w/340).toFixed(3));
+  const h = card.offsetHeight || 120;
+  const x = clamp(pos.x != null ? pos.x : (W - w)/2, 6, W - w - 6);
+  const y = clamp(pos.y != null ? pos.y : H - h - Math.max(28, H*0.08), 56, H - h - 8);
+  card.style.left = x + 'px'; card.style.top = y + 'px';
+  return {x, y, w};
+}
+let cardPos = store.get('card', {});
+function bindDrag(){
+  let st = null;
+  $('cardHead').addEventListener('pointerdown', e => {
+    if (e.target.closest('.sw')) return;
+    st = {kind:'move', sx:e.clientX, sy:e.clientY, x:card.offsetLeft, y:card.offsetTop};
+    $('cardHead').setPointerCapture(e.pointerId);
+  });
+  $('grip').addEventListener('pointerdown', e => {
+    e.stopPropagation();
+    st = {kind:'size', sx:e.clientX, w:card.offsetWidth, x:card.offsetLeft, y:card.offsetTop};
+    $('grip').setPointerCapture(e.pointerId);
+  });
+  const move = e => {
+    if (!st) return;
+    if (st.kind === 'move') cardPos = placeCard({x: st.x + e.clientX - st.sx, y: st.y + e.clientY - st.sy, w: card.offsetWidth});
+    else cardPos = placeCard({x: st.x, y: st.y, w: st.w + e.clientX - st.sx});
+  };
+  const end = () => { if (st){ st = null; store.set('card', cardPos); } };
+  for (const el of [$('cardHead'), $('grip')]){ el.addEventListener('pointermove', move); el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end); }
+  addEventListener('resize', () => { cardPos = placeCard(cardPos); });
+}
+
+/* ---------------- UI bits ---------------- */
+let toastT = 0;
+function toast(msg, ms=2600){ const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), ms); }
+function setPill(state, text, tag){
+  const p = $('pill'); p.dataset.s = state; $('pillText').textContent = text;
+  let tg = p.querySelector('.tag'); if (tag){ if (!tg){ tg = document.createElement('span'); tg.className = 'tag'; p.append(tg); } tg.textContent = tag; } else if (tg) tg.remove();
+}
+function renderPeople(){
+  const box = $('people'); box.innerHTML = '';
+  if (!S.people.length){ const c = document.createElement('span'); c.className='chip'; c.textContent='No one yet'; box.append(c); return; }
+  for (const p of S.people){ const c = document.createElement('span'); c.className = 'chip' + (p === S.current ? ' on' : ''); c.textContent = p.name; box.append(c); }
+}
+
+/* ---------------- Face tool (runs on this device) ---------------- */
+function loadScript(src){ return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('script')); document.head.append(s); }); }
+async function loadModels(){
+  if (S.models) return true;
+  if (S.modelsTried) return false;
+  S.modelsTried = true;
+  $('loading').hidden = false;
+  try{
+    if (!window.faceapi) await loadScript('vendor/face-api.js');
+    const fa = window.faceapi;
+    /* Weight files ship as .bin; where a host won't serve .bin, read the same bytes from a .b64.txt copy. */
+    if (!window.__nvgFetch){
+      const raw = window.fetch.bind(window);
+      window.__nvgFetch = async (url, init) => {
+        const u = String(url && url.url || url);
+        if (!/\.bin(\?|$)/.test(u)) return raw(url, init);
+        let r; try{ r = await raw(url, init); }catch(e){ r = null; }
+        if (r && r.ok) return r;
+        const t = await raw(u.replace(/\.bin(\?|$)/, '.b64.txt$1'), init);
+        if (!t.ok) return t;
+        const b = atob((await t.text()).trim()), a = new Uint8Array(b.length);
+        for (let i = 0; i < b.length; i++) a[i] = b.charCodeAt(i);
+        return new Response(a.buffer, { status: 200, headers: { 'Content-Type': 'application/octet-stream' } });
+      };
+      window.fetch = window.__nvgFetch;
+    }
+    try{ await fa.tf.setBackend('webgl'); }catch(e){}
+    await fa.tf.ready();
+    const base = 'models';
+    await Promise.all([
+      fa.nets.tinyFaceDetector.loadFromUri(base),
+      fa.nets.faceLandmark68TinyNet.loadFromUri(base),
+      fa.nets.faceExpressionNet.loadFromUri(base),
+      fa.nets.faceRecognitionNet.loadFromUri(base),
+    ]);
+    S.models = true;
+  }catch(e){ console.warn('face tool unavailable', e); S.models = false; }
+  $('loading').hidden = true;
+  return S.models;
+}
+
+const SAME = 0.5, NEW = 0.56, NONE_AFTER = 2200;
+function iou(a, b){
+  const x1 = Math.max(a.x, b.x), y1 = Math.max(a.y, b.y), x2 = Math.min(a.x+a.width, b.x+b.width), y2 = Math.min(a.y+a.height, b.y+b.height);
+  const i = Math.max(0, x2-x1) * Math.max(0, y2-y1); return i / (a.width*a.height + b.width*b.height - i || 1);
+}
+function meanOf(list){ const m = new Float32Array(128); for (const d of list) for (let i=0;i<128;i++) m[i]+=d[i]; for (let i=0;i<128;i++) m[i]/=list.length; return m; }
+function dist(a, b){ let s = 0; for (let i=0;i<128;i++){ const d = a[i]-b[i]; s += d*d; } return Math.sqrt(s); }
+function newPerson(desc){
+  const p = {id: S.people.length+1, name: 'Person ' + (S.people.length+1), samples:[desc], mean: desc, cueAt:{}, ema:{}, sig:freshSig(), seenAt: now()};
+  S.people.push(p); return p;
+}
+function identify(desc){
+  let best = null, bd = 9;
+  for (const p of S.people){ const d = dist(desc, p.mean); if (d < bd){ bd = d; best = p; } }
+  if (best && bd < SAME){
+    S.pending = null;
+    best.samples.push(desc); if (best.samples.length > 12) best.samples.shift(); best.mean = meanOf(best.samples);
+    return {person: best, d: bd};
+  }
+  if (!best || bd > NEW){
+    if (S.pending && dist(S.pending.desc, desc) < SAME) S.pending.n++; else S.pending = {desc, n:1};
+    if (S.pending.n >= 2 || !S.current){ const p = newPerson(desc); S.pending = null; return {person: p, d: bd, created: true}; }
+    return {person: S.current, d: bd, unsure: true};
+  }
+  return {person: S.current || best, d: bd, unsure: true};
+}
+function enterPerson(p, created){
+  const prev = S.current; S.current = p;
+  if (S.demo && S.demo.scene) p.demoScene = S.demo.scene;
+  if (p === prev) return;
+  p.sig = freshSig();
+  C.pri = 0;
+  cue(created ? 'newPerson' : 'returning', p);
+  setPill(created ? 'new' : 'face', p.name, created ? 'NEW' : '');
+  if (created) setTimeout(() => { if (S.current === p) setPill('face', p.name); }, 3500);
+  renderPeople();
+}
+function leaveAll(){
+  if (S.current){ S.current = null; }
+  S.track = null;
+  if (!S.noneShown){ S.noneShown = true; C.pri = 0; cue('none'); setPill('none', 'No one in view'); renderPeople(); }
+}
+
+/* nonverbal signals from landmarks + expressions */
+function freshSig(){ return {hist:[], mouth:[], away:0, tens:0, low:0, theirTalk:0, theirTalkStart:0, theirLastTalk:0, smileArmed:true, surpriseArmed:true}; }
+function avgPt(pts, a, b){ let x=0,y=0; for (let i=a;i<=b;i++){ x+=pts[i].x; y+=pts[i].y; } const n=b-a+1; return {x:x/n, y:y/n}; }
+function extremes(series, thr){
+  let n = 0, ref = series[0], dir = 0;
+  for (const v of series){ const d = v - ref;
+    if (dir >= 0 && d < -thr){ n++; dir = -1; ref = v; } else if (dir <= 0 && d > thr){ n++; dir = 1; ref = v; }
+    else if ((dir >= 0 && v > ref) || (dir <= 0 && v < ref)) ref = v; }
+  return n;
+}
+function readSignals(p, det, t, dt){
+  const sg = p.sig, pts = det.landmarks.positions;
+  const le = avgPt(pts, 36, 41), re = avgPt(pts, 42, 47), nose = pts[30];
+  const iod = Math.hypot(re.x-le.x, re.y-le.y) || 1;
+  const mid = {x:(le.x+re.x)/2, y:(le.y+re.y)/2};
+  const yaw = (nose.x - mid.x) / iod, pitch = (nose.y - mid.y) / iod;
+  const mouth = Math.hypot(pts[66].x-pts[62].x, pts[66].y-pts[62].y) / iod;
+  sg.hist.push({t, yaw, pitch}); while (sg.hist.length && t - sg.hist[0].t > 2200) sg.hist.shift();
+  sg.mouth.push({t, v:mouth}); while (sg.mouth.length && t - sg.mouth[0].t > 1300) sg.mouth.shift();
+
+  // expressions, smoothed per person
+  const ex = det.expressions, e = p.ema, a = 0.35;
+  const sm = k => (e[k] = (e[k] == null ? ex[k] : e[k] + a*(ex[k] - e[k])));
+  const happy = sm('happy'), surprised = sm('surprised'), sad = sm('sad');
+  const tense = (e.tense = (e.tense == null ? ex.angry+ex.disgusted : e.tense + a*((ex.angry+ex.disgusted) - e.tense)));
+
+  if (happy > 0.62 && sg.smileArmed){ sg.smileArmed = false; cue('smile', p); }
+  if (happy < 0.3) sg.smileArmed = true;
+  if (surprised > 0.55 && sg.surpriseArmed){ sg.surpriseArmed = false; cue('surprise', p); }
+  if (surprised < 0.2) sg.surpriseArmed = true;
+  sg.tens = tense > 0.45 ? sg.tens + dt : 0; if (sg.tens > 1200){ sg.tens = -8000; cue('tension', p); }
+  sg.low = sad > 0.5 ? sg.low + dt : 0; if (sg.low > 1600){ sg.low = -8000; cue('low', p); }
+  sg.away = Math.abs(yaw) > 0.33 ? sg.away + dt : 0; if (sg.away > 3500){ sg.away = -6000; cue('lookAway', p); }
+
+  if (sg.hist.length > 8 && t - sg.hist[0].t > 1200){
+    const nods = extremes(sg.hist.map(h => h.pitch), 0.035), shakes = extremes(sg.hist.map(h => h.yaw), 0.07);
+    if (shakes >= 3 && shakes > nods){ sg.hist = []; cue('shake', p); }
+    else if (nods >= 3){ sg.hist = []; cue('nod', p); }
+  }
+  // their mouth moving = they are probably talking
+  let talking = false;
+  if (sg.mouth.length > 5){ const v = sg.mouth.map(m => m.v); const mean = v.reduce((s,x)=>s+x,0)/v.length; const sd = Math.sqrt(v.reduce((s,x)=>s+(x-mean)*(x-mean),0)/v.length); talking = sd > 0.03 && Math.max(...v) > 0.07; }
+  return {talking};
+}
+
+/* sound: loudness only, never words */
+async function startAudio(stream){
+  if (!stream || !stream.getAudioTracks().length) return;
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    await ctx.resume();
+    const src = ctx.createMediaStreamSource(stream), an = ctx.createAnalyser(); an.fftSize = 1024; src.connect(an);
+    S.audio = {ctx, an, buf: new Float32Array(an.fftSize), floor: 0.01, mine:0, theirs:0, lastVoice:0, lastMine:0};
+  }catch(e){ console.warn('audio', e); }
+}
+function readLoudness(){
+  const A = S.audio; if (!A || !S.mic) { $('meter').style.height = '0'; return null; }
+  A.an.getFloatTimeDomainData(A.buf); let s = 0; for (const v of A.buf) s += v*v; const rms = Math.sqrt(s/A.buf.length);
+  A.floor = rms < A.floor ? A.floor*0.9 + rms*0.1 : A.floor*0.999 + rms*0.001;
+  const voice = rms > Math.max(A.floor*2.6, 0.012);
+  $('meter').style.height = clamp(rms*400, 0, 100) + '%';
+  return voice;
+}
+function talkBalance(p, theyTalk, voice, t, dt){
+  const A = S.audio, sg = p.sig;
+  if (theyTalk){
+    if (!sg.theirTalkStart) sg.theirTalkStart = t;
+    sg.theirLastTalk = t;
+    if (A && A.mine > 8000 && t - A.lastMine < 1500 && t - sg.theirTalkStart > 1200){ A.mine = 0; cue('tryEnter', p); }
+    if (A) A.mine = Math.max(0, A.mine - dt*2);
+  } else {
+    if (sg.theirTalkStart && t - sg.theirLastTalk > 600){
+      const ran = sg.theirLastTalk - sg.theirTalkStart; sg.theirTalkStart = 0;
+      if (ran > 6000) sg.awaitTurn = sg.theirLastTalk;
+    }
+    if (A && voice){ A.mine += dt; A.lastMine = t; if (A.mine > 50000){ A.mine = -40000; cue('longTalk', p); } sg.awaitTurn = 0; }
+  }
+  if (sg.awaitTurn && !theyTalk && !voice && t - sg.awaitTurn > 2600){ sg.awaitTurn = 0; cue('yourTurn', p); }
+}
+
+/* ---------------- Drawing ---------------- */
+const ov = $('overlay'), octx = ov.getContext('2d');
+function fitOverlay(){ const r = devicePixelRatio || 1; ov.width = innerWidth*r; ov.height = innerHeight*r; octx.setTransform(r,0,0,r,0,0); }
+function mapBox(b, sw, sh, mirror){
+  const W = innerWidth, H = innerHeight, k = Math.max(W/sw, H/sh), dx = (W - sw*k)/2, dy = (H - sh*k)/2;
+  let x = b.x*k + dx; const y = b.y*k + dy, w = b.width*k, h = b.height*k;
+  if (mirror) x = W - x - w;
+  return {x, y, w, h};
+}
+function drawFaces(faces, mainIdx, sw, sh, mirror, label){
+  octx.clearRect(0, 0, innerWidth, innerHeight);
+  faces.forEach((f, i) => {
+    const r = mapBox(f, sw, sh, mirror), main = i === mainIdx;
+    const pad = r.w*0.1, x = r.x - pad, y = r.y - pad*1.4, w = r.w + pad*2, h = r.h + pad*2.4, L = Math.min(w, h)*0.18;
+    octx.strokeStyle = main ? 'rgba(214,107,194,.95)' : 'rgba(255,255,255,.35)';
+    octx.lineWidth = main ? 2 : 1.2; octx.lineCap = 'round';
+    octx.beginPath();
+    octx.moveTo(x, y+L); octx.lineTo(x, y); octx.lineTo(x+L, y);
+    octx.moveTo(x+w-L, y); octx.lineTo(x+w, y); octx.lineTo(x+w, y+L);
+    octx.moveTo(x+w, y+h-L); octx.lineTo(x+w, y+h); octx.lineTo(x+w-L, y+h);
+    octx.moveTo(x+L, y+h); octx.lineTo(x, y+h); octx.lineTo(x, y+h-L);
+    octx.stroke();
+    if (main && label){
+      octx.font = '500 12px "DM Sans", -apple-system, sans-serif';
+      const tw = octx.measureText(label).width + 16;
+      octx.fillStyle = 'rgba(19,13,34,.72)'; const ly = Math.max(y - 26, 62), lx = clamp(x, 8, innerWidth - tw - 8);
+      roundRect(lx, ly, tw, 20, 10); octx.fill();
+      octx.fillStyle = '#fff'; octx.fillText(label, lx + 8, ly + 14);
+    }
+  });
+}
+function roundRect(x, y, w, h, r){ octx.beginPath(); octx.moveTo(x+r, y); octx.arcTo(x+w, y, x+w, y+h, r); octx.arcTo(x+w, y+h, x, y+h, r); octx.arcTo(x, y+h, x, y, r); octx.arcTo(x, y, x+w, y, r); octx.closePath(); }
+
+/* ---------------- Main loop ---------------- */
+let lastT = 0;
+async function loop(){
+  if (!S.running) return;
+  const t = now(), dt = lastT ? Math.min(400, t - lastT) : 100; lastT = t;
+  try{
+    if (S.mode === 'live') await liveStep(t, dt);
+    else if (S.mode === 'demo') await demoStep(t, dt);
+    const ms = now() - t; S.perf = S.perf ? S.perf*0.9 + ms*0.1 : ms; window.__nvgPerf = S.perf;
+  }catch(e){ console.warn(e); }
+  cardTick();
+  if (S.running) setTimeout(loop, Math.max(30, 110 - (now() - t)));
+}
+
+async function analyze(src, sw, sh, t, dt, mirror){
+  const fa = window.faceapi;
+  const dets = await fa.detectAllFaces(src, new fa.TinyFaceDetectorOptions({inputSize: 320, scoreThreshold: 0.45}))
+    .withFaceLandmarks(true).withFaceExpressions();
+  const voice = readLoudness();
+  if (!dets.length){
+    octx.clearRect(0, 0, innerWidth, innerHeight);
+    if (t - S.lastFaceAt > NONE_AFTER) leaveAll();
+    return;
+  }
+  S.lastFaceAt = t;
+  // main face: big and near the middle
+  let mi = 0, ms = -1;
+  dets.forEach((d, i) => { const b = d.detection.box, cx = (b.x + b.width/2)/sw - .5, cy = (b.y + b.height/2)/sh - .45;
+    const s = b.width*b.height*(1 - Math.min(.8, Math.hypot(cx, cy)*1.3)); if (s > ms){ ms = s; mi = i; } });
+  const main = dets[mi], box = main.detection.box;
+  const moved = !S.track || iou(S.track.box, box) < 0.3;
+  if (moved || t - S.track.lastRecog > 1500 || !S.current){
+    const [fc] = await fa.extractFaces(src, [main.alignedRect]);
+    const desc = await fa.computeFaceDescriptor(fc);
+    const r = identify(desc);
+    S.track = {box, lastRecog: t};
+    if (r.person){ S.noneShown = false; enterPerson(r.person, !!r.created); }
+  } else S.track.box = box;
+  const p = S.current;
+  drawFaces(dets.map(d => d.detection.box), mi, sw, sh, mirror, p ? p.name : '');
+  if (p){ const {talking} = readSignals(p, main, t, dt); talkBalance(p, talking, voice, t, dt); }
+}
+
+async function liveStep(t, dt){
+  const v = $('cam'); if (v.readyState < 2 || !v.videoWidth) return;
+  if (!S.models) return;
+  await analyze(v, v.videoWidth, v.videoHeight, t, dt, S.facing === 'user');
+}
+
+/* ---------------- Live camera ---------------- */
+async function openCamera(){
+  stopStream();
+  const wantAudio = S.mic;
+  const c = {video:{facingMode:{ideal:S.facing}, width:{ideal:1280}, height:{ideal:720}}, audio: wantAudio ? {echoCancellation:true, noiseSuppression:false} : false};
+  let st;
+  try{ st = await navigator.mediaDevices.getUserMedia(c); }
+  catch(e){ if (wantAudio){ st = await navigator.mediaDevices.getUserMedia({video:c.video, audio:false}); toast('Microphone is off, so sound reading is off.'); S.mic = false; syncMic(); } else throw e; }
+  S.stream = st;
+  const v = $('cam'); v.srcObject = st; v.hidden = false; v.classList.toggle('mirror', S.facing === 'user');
+  await v.play().catch(() => {});
+  if (st.getAudioTracks().length) await startAudio(st);
+}
+function stopStream(){
+  if (S.stream){ S.stream.getTracks().forEach(t => t.stop()); S.stream = null; }
+  if (S.audio){ try{ S.audio.ctx.close(); }catch(e){} S.audio = null; }
+}
+async function startLive(){
+  $('startBtn').disabled = true; $('startBtn').textContent = 'Opening camera…';
+  try{
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('nocam');
+    await openCamera();
+  }catch(e){
+    console.warn(e);
+    $('startBtn').disabled = false; $('startBtn').textContent = 'Start camera';
+    const n = $('camNote'); n.hidden = false;
+    n.textContent = e && e.name === 'NotAllowedError'
+      ? 'Camera access was turned down. Allow the camera for this page in Settings, then try again. The demo works without it.'
+      : 'This view can’t open your camera. Open the live address in Safari on your phone. The demo runs here.';
+    return;
+  }
+  enterApp('live');
+  const ok = await loadModels();
+  if (!ok) toast('The face tool did not load. Check the connection and reopen.', 5000);
+}
+function enterApp(mode){
+  stopDemo();
+  S.mode = mode; $('start').hidden = true; $('rail').hidden = false; card.hidden = false;
+  $('demoTag').hidden = mode !== 'demo';
+  $('flipBtn').hidden = mode !== 'live';
+  $('modeLabel').textContent = mode === 'live' ? 'Live camera' : 'Demo';
+  $('switchMode').textContent = mode === 'live' ? 'Show demo' : 'Use camera';
+  forget(true);
+  cardPos = placeCard(cardPos);
+  showLine('Looking for a face.', '', {quiet:true}); C.id = 'idle'; C.shownAt = now();
+  setPill('none', 'Looking for a face');
+  wakeLock();
+  if (!S.running){ S.running = true; lastT = 0; loop(); }
+}
+function forget(silent){
+  S.people = []; S.current = null; S.track = null; S.pending = null; S.noneShown = false; S.lastFaceAt = now();
+  renderPeople(); if (!silent) toast('Everyone in this session is forgotten.');
+}
+
+/* ---------------- Demo ---------------- */
+const SCENES = {p1:'demo/p1.jpg', p2:'demo/p2.jpg', empty:'demo/empty.jpg'};
+// fallback boxes (scene pixels, 900x1200) if the face tool can't load here
+const FALLBACK = {p1:{x:268,y:220,width:300,height:330}, p2:{x:250,y:170,width:265,height:300}};
+const PLAN = [
+  [0,'scene','p1'], [7,'cue','smile'], [13.5,'cue','tryEnter'],
+  [19.5,'scene','empty'], [25,'scene','p2'], [32,'cue','tension'],
+  [38.5,'scene','p1'], [45,'cue','nod'], [51.5,'loop']
+];
+const imgCache = {}, imgReady = {};
+function loadImg(src){ return imgCache[src] || (imgCache[src] = new Promise((res, rej) => { const i = new Image(); i.onload = () => { imgReady[src] = i; res(i); }; i.onerror = rej; i.src = src; })); }
+async function startDemo(){
+  enterApp('demo');
+  const sc = $('scene'); sc.hidden = false; $('cam').hidden = true; $('stage').classList.add('drift');
+  S.demo = {t0: now(), step: 0, scene: null, from: null, fadeAt: 0, src: document.createElement('canvas'), simPerson: {}};
+  await Promise.all(Object.values(SCENES).map(loadImg)).catch(() => {});
+  requestAnimationFrame(renderDemo);
+  loadModels().then(ok => { if (!ok && S.mode === 'demo') toast('Showing the demo with stand-in face boxes.', 3500); });
+}
+function renderDemo(){
+  const D = S.demo; if (!D || S.mode !== 'demo') return;
+  requestAnimationFrame(renderDemo);
+  if (!D.scene) return;
+  const img = imgReady[SCENES[D.scene]]; if (!img) return;
+  const sc = $('scene'), r = devicePixelRatio || 1, W = innerWidth, H = innerHeight;
+  if (sc.width !== Math.round(W*r) || sc.height !== Math.round(H*r)){ sc.width = Math.round(W*r); sc.height = Math.round(H*r); }
+  const ctx = sc.getContext('2d'); ctx.setTransform(r,0,0,r,0,0);
+  const fade = clamp((now() - D.fadeAt)/450, 0, 1), prev = D.from && imgReady[SCENES[D.from]];
+  if (prev && fade < 1){ drawCover(ctx, prev, W, H, 1); drawCover(ctx, img, W, H, fade); }
+  else if (D.drawn !== D.scene || fade < 1 || D.dirty){ drawCover(ctx, img, W, H, 1); D.drawn = fade >= 1 ? D.scene : null; D.dirty = false; }
+}
+addEventListener('resize', () => { if (S.demo) S.demo.dirty = true; });
+function stopDemo(){ S.demo = null; $('scene').hidden = true; $('stage').classList.remove('drift'); }
+function drawCover(ctx, img, W, H, alpha){
+  const k = Math.max(W/img.width, H/img.height), w = img.width*k, h = img.height*k;
+  ctx.globalAlpha = alpha; ctx.drawImage(img, (W-w)/2, (H-h)/2, w, h); ctx.globalAlpha = 1;
+}
+async function demoStep(t, dt){
+  const D = S.demo; if (!D) return;
+  const el = (t - D.t0)/1000 * SPEED;
+  while (D.step < PLAN.length && el >= PLAN[D.step][0]){
+    const [, kind, arg] = PLAN[D.step++];
+    if (kind === 'scene'){ D.from = D.scene; D.scene = arg; D.fadeAt = t; }
+    else if (kind === 'cue' && S.current && S.current.demoScene === D.scene) cue(arg, S.current);
+    else if (kind === 'loop'){ D.t0 = t; D.step = 0; D.simPerson = {}; forget(true); S.lastFaceAt = t; }
+  }
+  if (!D.scene) return;
+  const img = await loadImg(SCENES[D.scene]).catch(() => null); if (!img) return;
+  // what the face tool reads: the scene itself
+  if (S.models){
+    const src = D.src; if (src.width !== img.width){ src.width = img.width; src.height = img.height; }
+    src.getContext('2d').drawImage(img, 0, 0);
+    await analyze(src, img.width, img.height, t, dt, false);
+  } else {
+    readLoudness();
+    const fb = FALLBACK[D.scene];
+    if (!fb){ octx.clearRect(0,0,innerWidth,innerHeight); if (t - D.fadeAt > NONE_AFTER) leaveAll(); return; }
+    let p = D.simPerson[D.scene], created = false;
+    if (!p){ p = D.simPerson[D.scene] = newPerson(new Float32Array(128)); created = true; }
+    if (!S.people.includes(p)){ S.people.push(p); created = true; }
+    S.noneShown = false; S.lastFaceAt = t;
+    if (S.current !== p) enterPerson(p, created);
+    drawFaces([fb], 0, img.width, img.height, false, p.name);
+  }
+}
+
+/* ---------------- Controls ---------------- */
+function syncMic(){ $('micSw').setAttribute('aria-checked', S.mic); $('micBtn').classList.toggle('off', !S.mic); store.set('mic', S.mic); }
+async function toggleMic(){
+  S.mic = !S.mic; syncMic();
+  if (S.mode === 'live' && S.mic && !S.audio){ try{ await openCamera(); }catch(e){} }
+  if (!S.mic && S.stream){ S.stream.getAudioTracks().forEach(t => { t.stop(); S.stream.removeTrack(t); }); if (S.audio){ try{ S.audio.ctx.close(); }catch(e){} S.audio = null; } }
+  toast(S.mic ? 'Sound reading on. Loudness only.' : 'Sound reading off.');
+}
+let wl = null;
+async function wakeLock(){ try{ if ('wakeLock' in navigator && document.visibilityState === 'visible') wl = await navigator.wakeLock.request('screen'); }catch(e){} }
+
+function init(){
+  setClean(store.get('clean', true));
+  syncMic(); fitOverlay(); bindDrag();
+  addEventListener('resize', fitOverlay);
+  $('startBtn').onclick = startLive;
+  $('demoBtn').onclick = startDemo;
+  $('cleanSw').onclick = () => setClean(!card.classList.contains('clean'));
+  $('cleanSw2').onclick = () => setClean(!card.classList.contains('clean'));
+  $('micBtn').onclick = toggleMic; $('micSw').onclick = toggleMic;
+  $('flipBtn').onclick = async () => { S.facing = S.facing === 'user' ? 'environment' : 'user'; try{ await openCamera(); }catch(e){ toast('Could not switch cameras.'); } S.track = null; };
+  $('moreBtn').onclick = () => { renderPeople(); $('more').hidden = false; };
+  $('closeMore').onclick = () => { $('more').hidden = true; };
+  $('more').addEventListener('click', e => { if (e.target === $('more')) $('more').hidden = true; });
+  $('forgetBtn').onclick = () => { forget(false); setPill('none', 'Looking for a face'); };
+  $('resetCard').onclick = () => { cardPos = placeCard({}); store.set('card', {}); };
+  $('switchMode').onclick = () => { $('more').hidden = true; if (S.mode === 'live'){ stopStream(); $('cam').hidden = true; startDemo(); } else { $('start').hidden = true; startLive(); } };
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible'){ wakeLock(); if (S.mode === 'live' && !S.stream) openCamera().catch(() => {}); if (S.audio) S.audio.ctx.resume(); }
+    else if (S.mode === 'live'){ stopStream(); }
+  });
+  addEventListener('pagehide', () => { stopStream(); S.people = []; });
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent), standalone = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
+  $('a2hs').hidden = !(ios && !standalone);
+  if (new URLSearchParams(location.search).has('demo') || location.hash === '#demo') startDemo();
+}
+init();
+})();
+</script>
+
+</body></html>
