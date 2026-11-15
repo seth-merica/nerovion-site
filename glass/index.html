@@ -649,7 +649,7 @@ function talkBalance(p, theyTalk, voice, t, dt){
 
 /* words: the phone's own speech-to-text, read by simple rules here. Nothing is kept or sent by this page. */
 const SRC = window.SpeechRecognition || window.webkitSpeechRecognition;
-const WD = {lines:[], rec:null, status:'', fails:0, blocked:false, done:new Map(), pend:null, myQAt:0, myWords:0, heardT:0};
+const WD = {count:{}, lastResultAt:0, startedAt:0, lines:[], rec:null, status:'', fails:0, blocked:false, done:new Map(), pend:null, myQAt:0, myWords:0, heardT:0};
 const QSTART = /\b(what|how|why|when|where|who|which|can you|could you|would you|will you|do you|does (it|that|this)|is (it|that|there)|are (you|there|we)|should (we|i))\b/i;
 const NAME_RE = /\b(?:my name is|my name's|call me|this is)\s+([A-Z][a-z]{1,15})\b/;
 const RULES = [
@@ -681,9 +681,9 @@ function speaker(){
   if (!p) return 'room';
   return p.sig && p.sig.theirLastTalk && t - p.sig.theirLastTalk < 2500 ? 'them' : 'me';
 }
-function showHeard(text){
+function showHeard(text, who){
   const h = $('heard'); if (!h) return;
-  h.textContent = ''; const i = document.createElement('i'); i.textContent = 'HEARD';
+  h.textContent = ''; const i = document.createElement('i'); i.textContent = who ? 'HEARD · ' + who.toUpperCase() : 'HEARD';
   const tail = text.replace(/\s+/g, ' ').trim(); h.append(i, document.createTextNode(tail.length > 70 ? '…' + tail.slice(-70) : tail));
   h.classList.add('on'); clearTimeout(WD.heardT); WD.heardT = setTimeout(() => h.classList.remove('on'), 5000);
 }
@@ -691,6 +691,9 @@ function onWords(text){
   text = (text || '').trim(); if (!text) return;
   const t = now(), who = speaker();
   WD.lines.push({who: who === 'me' ? 'ME' : who === 'them' ? 'THEM' : 'ROOM', text, t}); if (WD.lines.length > 8) WD.lines.shift();
+  WD.count[who] = (WD.count[who] || 0) + 1; WD.lastResultAt = t;
+  showHeard(text, who === 'me' ? 'you' : who === 'them' && S.current ? S.current.name : 'room');
+  syncWords();
   if (who === 'me'){
     if (questionOf(text)){ WD.myQAt = t; WD.myWords = 0; return; }
     WD.myWords += text.split(/\s+/).length;
@@ -720,7 +723,8 @@ function takeResult(i, txt, final){
 }
 function syncWords(){
   $('wordsSw').setAttribute('aria-checked', S.words); store.set('words', S.words);
-  $('wordsStatus').textContent = S.words && WD.status ? 'Now: ' + WD.status + '.' : '';
+  const c = WD.count, n = (c.me||0) + (c.them||0) + (c.room||0);
+  $('wordsStatus').textContent = S.words && WD.status ? 'Now: ' + WD.status + '.' + (n ? ' Heard ' + n + ' lines: ' + (c.me||0) + ' you, ' + (c.them||0) + ' the person you face, ' + (c.room||0) + ' no face in view.' : '') : '';
 }
 function startWords(){
   if (!S.words || S.mode !== 'live' || WD.rec || WD.blocked || document.visibilityState !== 'visible') return;
@@ -750,8 +754,17 @@ function startWords(){
     syncWords();
   };
   r.onend = () => { if (WD.rec === r) WD.rec = null; if (S.words && S.mode === 'live' && !WD.blocked) setTimeout(startWords, WD.fails > 3 ? 6000 : 300); };
-  try{ r.start(); WD.rec = r; WD.status = 'listening'; }catch(e){ WD.status = 'could not start'; }
+  try{ r.start(); WD.rec = r; WD.status = 'listening'; WD.startedAt = now(); }catch(e){ WD.status = 'could not start'; }
   syncWords();
+}
+function wordsWatch(voice){
+  if (!S.words || S.mode !== 'live' || !WD.rec) return;
+  const t = now();
+  if (voice) WD.lastVoiceAt = t;
+  // sound in the room for a while but no words back: the phone's recogniser has stalled, so restart it
+  if (WD.lastVoiceAt && t - WD.lastVoiceAt < 1500 && t - Math.max(WD.lastResultAt, WD.startedAt, WD.lastKick || 0) > 15000){
+    WD.lastKick = t; const r = WD.rec; try{ r.stop(); }catch(e){}
+  }
 }
 function stopWords(){ const r = WD.rec; WD.rec = null; clearTimeout(WD.pendT); WD.pend = null; if (r){ r.onend = null; try{ r.abort(); }catch(e){} } }
 function toggleWords(){
@@ -856,7 +869,7 @@ async function analyze(src, sw, sh, t, dt, mirror){
   const fa = window.faceapi;
   const dets = await fa.detectAllFaces(src, new fa.TinyFaceDetectorOptions({inputSize: 320, scoreThreshold: 0.4}))
     .withFaceLandmarks(true).withFaceExpressions();
-  const voice = readLoudness();
+  const voice = readLoudness(); wordsWatch(voice);
   if (!dets.length){
     octx.clearRect(0, 0, innerWidth, innerHeight);
     if (t - S.lastFaceAt > 1000) S.track = null;   // a gap breaks tracking, so the next face is checked fresh
@@ -894,7 +907,7 @@ async function liveStep(t, dt){
 async function openCamera(){
   stopStream();
   const wantAudio = S.mic;
-  const c = {video:{facingMode:{ideal:S.facing}, width:{ideal:1280}, height:{ideal:720}}, audio: wantAudio ? {echoCancellation:true, noiseSuppression:false} : false};
+  const c = {video:{facingMode:{ideal:S.facing}, width:{ideal:1280}, height:{ideal:720}}, audio: wantAudio ? {echoCancellation:false, noiseSuppression:false, autoGainControl:true} : false};
   let st;
   try{ st = await navigator.mediaDevices.getUserMedia(c); }
   catch(e){ if (wantAudio){ st = await navigator.mediaDevices.getUserMedia({video:c.video, audio:false}); toast('Microphone is off, so sound reading is off.'); S.mic = false; syncMic(); } else throw e; }
@@ -991,7 +1004,7 @@ async function demoStep(t, dt){
     const [, kind, arg] = PLAN[D.step++];
     if (kind === 'scene'){ D.from = D.scene; D.scene = arg; D.fadeAt = t; }
     else if (kind === 'cue' && S.current && S.current.demoScene === D.scene) cue(arg, S.current);
-    else if (kind === 'say' && S.current && S.current.demoScene === D.scene){ showHeard(arg); readWords(arg, S.current); }
+    else if (kind === 'say' && S.current && S.current.demoScene === D.scene){ showHeard(arg, S.current.name); readWords(arg, S.current); }
     else if (kind === 'loop'){ D.t0 = t; D.step = 0; D.simPerson = {}; forget(true); S.lastFaceAt = t; }
   }
   if (!D.scene) return;
