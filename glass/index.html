@@ -141,10 +141,23 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--viola-soft
 .fine{font-size:12.5px;line-height:1.5;color:var(--ink-3);text-align:center;text-wrap:balance}
 .note{font-size:13.5px;line-height:1.45;color:#ffd2a8;background:rgba(237,125,27,.12);border:.5px solid rgba(237,125,27,.4);border-radius:12px;padding:10px 12px}
 
-.row{display:flex;align-items:center;gap:12px;min-height:44px}
+.panel>*{flex-shrink:0}
+.row{display:flex;align-items:center;gap:14px;min-height:44px}
 .row .lab{flex:1;min-width:0}
 .row .lab b{display:block;font-weight:500;font-size:15px}
-.row .lab small{display:block;color:var(--ink-3);font-size:12.5px;line-height:1.4;margin-top:2px}
+.row .lab small{display:block;color:var(--ink-3);font-size:12.5px;line-height:1.45;margin-top:3px}
+.row .lab .now{display:block;margin-top:5px;color:var(--viola-soft);font-size:12px;line-height:1.4}
+.row .lab .now:empty{display:none}
+.ver{font-size:11.5px;color:var(--ink-3);text-align:center;padding-top:4px}
+/* recording */
+#recBtn i{width:14px;height:14px;border-radius:50%;background:#ff3b4a;box-shadow:0 0 0 2px rgba(255,255,255,.85);transition:all .2s}
+#recBtn.on i{width:12px;height:12px;border-radius:3px;box-shadow:none}
+#recBtn.on{background:rgba(255,59,74,.28);border-color:rgba(255,59,74,.7)}
+.recpill{position:absolute;right:max(14px,env(safe-area-inset-right,0px));top:calc(env(safe-area-inset-top,0px) + 56px);z-index:7;display:flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-radius:15px;background:rgba(200,20,40,.88);font-size:13px;font-weight:500;letter-spacing:.06em;font-variant-numeric:tabular-nums;pointer-events:none}
+.recpill i{width:8px;height:8px;border-radius:50%;background:#fff;animation:blink 1s steps(2,start) infinite}
+@keyframes blink{to{visibility:hidden}}
+.clipv{width:100%;max-height:46vh;border-radius:14px;background:#000;object-fit:contain}
+.btnrow{display:flex;gap:10px}.btnrow .btn{flex:1}
 .row .sw .t{width:44px;height:26px;border-radius:13px}
 .row .sw .t::after{width:20px;height:20px;top:3px;left:3px}
 .row .sw[aria-checked="true"] .t::after{left:21px}
@@ -160,6 +173,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--viola-soft
   background:rgba(19,13,34,.85);border:.5px solid rgba(255,255,255,.16);border-radius:14px;padding:9px 14px;font-size:13.5px;max-width:min(88vw,380px);text-align:center;
   opacity:0;transition:opacity .3s;pointer-events:none}
 #toast.show{opacity:1}
+#app.recording #toast{top:calc(env(safe-area-inset-top,0px) + 98px)}
 #loading{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateX(-50%);z-index:7;font-size:12.5px;color:var(--ink-2);
   background:rgba(19,13,34,.7);padding:7px 12px;border-radius:12px;white-space:nowrap}
 @media (prefers-reduced-motion:reduce){#stage.drift{animation:none}.cap.swap{animation:none}}
@@ -179,6 +193,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--viola-soft
       <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg></button>
     <button class="ib" id="flipBtn" aria-label="Switch camera" title="Switch camera">
       <svg viewBox="0 0 24 24"><path d="M4 8.5h2.6L8.3 6h7.4l1.7 2.5H20v10H4z"/><path d="M9.2 13.4a2.9 2.9 0 0 1 5-1.9M14.8 13.6a2.9 2.9 0 0 1-5 1.9"/><path d="M14.4 10.2v1.5h-1.5M9.6 16.8v-1.5h1.5"/></svg></button>
+    <button class="ib" id="recBtn" aria-label="Record a demo clip" title="Record"><i></i></button>
     <button class="ib" id="moreBtn" aria-label="Settings" title="Settings">
       <svg viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="18.5" cy="12" r="1.2"/></svg></button>
   </div>
@@ -219,11 +234,11 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--viola-soft
   <div class="sheet" id="more" hidden>
     <div class="panel" role="dialog" aria-label="Settings">
       <div class="sheet-h"><h2>Nerovion Glass</h2><button class="link" id="closeMore">Done</button></div>
-      <div class="row"><div class="lab"><b>Sound reading</b><small>Uses loudness only, to tell when you're talking and when they're done. Words have their own switch below.</small></div>
+      <div class="row"><div class="lab"><b>Sound reading</b><small>Loudness only, to tell when you're talking and when they're done.</small></div>
         <button class="sw" id="micSw" role="switch" aria-checked="true" aria-label="Sound reading"><span class="t"></span></button></div>
-      <div class="row"><div class="lab"><b>Words</b><small>Your phone turns speech into words so nudges follow what's said. iPhone may use Apple's servers to do this. Nerovion saves nothing, and words leave the phone only when the Claude reader is on. <span id="wordsStatus"></span></small></div>
+      <div class="row"><div class="lab"><b>Words</b><small>Turns speech into words so nudges follow what's said. iPhone may use Apple's servers. Nothing is saved.</small><span class="now" id="wordsStatus"></span></div>
         <button class="sw" id="wordsSw" role="switch" aria-checked="true" aria-label="Words"><span class="t"></span></button></div>
-      <div class="row"><div class="lab"><b>Claude reader</b><small>Sends the last few lines of words, as text only, to Nerovion’s server and Claude for sharper nudges. No audio, nothing stored. Use it on your own calls, never client calls. <span id="claudeStatus"></span></small></div>
+      <div class="row"><div class="lab"><b>Claude reader</b><small>Sends recent words, as text only, to Nerovion’s server for sharper nudges. No audio, nothing stored. Your own calls only, never client calls.</small><span class="now" id="claudeStatus"></span></div>
         <button class="sw" id="claudeSw" role="switch" aria-checked="false" aria-label="Claude reader"><span class="t"></span></button></div>
       <div class="row" id="passRow" hidden><div class="lab"><b>Reader passcode</b><small>The passcode set on Nerovion’s server. Kept on this phone only.</small></div>
         <input id="passIn" class="pass" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Passcode" aria-label="Reader passcode"></div>
@@ -240,6 +255,19 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--viola-soft
         <button class="link" id="resetCard">Reset</button></div>
       <div class="row"><div class="lab"><b id="modeLabel">Live camera</b><small id="modeSmall">Switch between your camera and the demo.</small></div>
         <button class="link" id="switchMode">Show demo</button></div>
+      <div class="row"><div class="lab"><b>Demo reels</b><small>Tap the red dot at the top to record the camera and the card, in portrait with sound. The menu and buttons stay out of the clip. The video stays on this phone until you save it.</small></div></div>
+      <div class="ver" id="ver"></div>
+    </div>
+  </div>
+
+  <div class="recpill" id="recPill" hidden><i></i><span id="recTime">REC 0:00</span></div>
+
+  <div class="sheet" id="clip" hidden>
+    <div class="panel" role="dialog" aria-label="Your clip">
+      <div class="sheet-h"><h2>Your clip</h2><button class="link" id="clipClose">Close</button></div>
+      <video class="clipv" id="clipVid" playsinline controls loop muted></video>
+      <div class="btnrow"><button class="btn ghost" id="clipDrop">Discard</button><button class="btn primary" id="clipSave">Save video</button></div>
+      <div class="fine" id="clipNote">Save video opens the share sheet. Choose Save Video to put it in Photos.</div>
     </div>
   </div>
 
@@ -724,7 +752,7 @@ function takeResult(i, txt, final){
 function syncWords(){
   $('wordsSw').setAttribute('aria-checked', S.words); store.set('words', S.words);
   const c = WD.count, n = (c.me||0) + (c.them||0) + (c.room||0);
-  $('wordsStatus').textContent = S.words && WD.status ? 'Now: ' + WD.status + '.' + (n ? ' Heard ' + n + ' lines: ' + (c.me||0) + ' you, ' + (c.them||0) + ' the person you face, ' + (c.room||0) + ' no face in view.' : '') : '';
+  $('wordsStatus').textContent = S.words && WD.status ? 'Now: ' + WD.status + '. Heard so far: ' + (c.me||0) + ' from you, ' + (c.them||0) + ' from the person you face, ' + (c.room||0) + ' with no face in view.' : '';
 }
 function startWords(){
   if (!S.words || S.mode !== 'live' || WD.rec || WD.blocked || document.visibilityState !== 'visible') return;
@@ -1038,6 +1066,222 @@ async function toggleMic(){
 let wl = null;
 async function wakeLock(){ try{ if ('wakeLock' in navigator && document.visibilityState === 'visible') wl = await navigator.wakeLock.request('screen'); }catch(e){} }
 
+/* ---------------- Version check ---------------- */
+const BUILD = '2026-11-15.0908';
+async function checkVersion(){
+  if (BUILD.startsWith('__') || !/^https?:/.test(location.protocol)) return;
+  try{
+    const r = await fetch('version.json?t=' + Date.now(), {cache:'no-store'}); if (!r.ok) return;
+    const v = (await r.json()).build; if (!v || v === BUILD) return;
+    const key = 'nvg.reloaded.' + v;
+    if (sessionStorage.getItem(key)) return;
+    if (S.mode === 'idle' && !REC.on){ sessionStorage.setItem(key, '1'); location.replace(location.pathname + '?v=' + encodeURIComponent(v) + location.hash); }
+    else toast('A newer Glass is ready. Close it and reopen to get it.', 5000);
+  }catch(e){}
+}
+
+/* ---------------- Demo reel recorder ----------------
+   Draws the camera (or demo scene), the face marks and the Glass card into a
+   1080x1920 canvas and records that with the mic. The rail, menus and toasts
+   are never drawn, so they stay out of the clip. Nothing leaves the phone. */
+const OUT_W = 1080, OUT_H = 1920, REC_MAX = 180000;
+const REC = { on:false, cv:null, ctx:null, mr:null, chunks:[], t0:0, raf:0, offY:null, blob:null, url:null, type:'', tick:0 };
+
+function recType(){
+  if (!window.MediaRecorder) return null;
+  const list = ['video/mp4;codecs=avc1,mp4a.40.2', 'video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+  for (const t of list){ try{ if (MediaRecorder.isTypeSupported(t)) return t; }catch(e){} }
+  return '';
+}
+function startRec(){
+  if (S.mode === 'idle') return;
+  const type = recType(), cv = document.createElement('canvas');
+  if (type === null || !cv.captureStream){ toast('This browser can’t record here. Use the iPhone’s Screen Recording in Control Center instead.', 5000); return; }
+  cv.width = OUT_W; cv.height = OUT_H;
+  REC.cv = cv; REC.ctx = cv.getContext('2d'); REC.offY = null;
+  drawFrame();
+  const out = cv.captureStream(30);
+  const a = S.stream && S.stream.getAudioTracks().find(t => t.readyState === 'live');
+  if (a) out.addTrack(a);
+  let mr;
+  try{ mr = new MediaRecorder(out, Object.assign({videoBitsPerSecond: 8000000, audioBitsPerSecond: 128000}, type ? {mimeType: type} : {})); }
+  catch(e){ try{ mr = new MediaRecorder(out); }catch(e2){ toast('Recording could not start on this phone.'); return; } }
+  REC.mr = mr; REC.chunks = []; REC.type = mr.mimeType || type || 'video/mp4';
+  mr.ondataavailable = e => { if (e.data && e.data.size) REC.chunks.push(e.data); };
+  mr.onstop = finishRec;
+  mr.start(1000);
+  REC.on = true; REC.t0 = now();
+  $('recBtn').classList.add('on'); $('recBtn').setAttribute('aria-label', 'Stop recording');
+  $('recPill').hidden = false; $('more').hidden = true; $('app').classList.add('recording');
+  loopRec();
+  if (!a) toast(S.mode === 'demo' ? 'Recording the demo without sound.' : 'Recording without sound. Turn on Sound reading to record audio.', 3500);
+}
+function stopRec(){
+  if (!REC.on) return;
+  REC.on = false; cancelAnimationFrame(REC.raf);
+  $('recBtn').classList.remove('on'); $('recBtn').setAttribute('aria-label', 'Record a demo clip');
+  $('recPill').hidden = true; $('app').classList.remove('recording');
+  try{ REC.mr.stop(); }catch(e){ finishRec(); }
+}
+function finishRec(){
+  const parts = REC.chunks; REC.chunks = []; REC.mr = null;
+  if (!parts.length){ toast('Nothing was recorded. Try again.'); return; }
+  if (REC.url) URL.revokeObjectURL(REC.url);
+  REC.blob = new Blob(parts, {type: REC.type.split(';')[0]});
+  REC.url = URL.createObjectURL(REC.blob);
+  const v = $('clipVid'); v.src = REC.url; v.play().catch(() => {});
+  $('clip').hidden = false;
+}
+async function saveClip(){
+  if (!REC.blob) return;
+  const ext = /mp4/.test(REC.blob.type) ? 'mp4' : 'webm';
+  const d = new Date(), pad = n => String(n).padStart(2, '0');
+  const name = 'nerovion-glass-' + d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate()) + '-' + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds()) + '.' + ext;
+  const file = new File([REC.blob], name, {type: REC.blob.type});
+  try{
+    if (navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file]}); return; }
+  }catch(e){ if (e && e.name === 'AbortError') return; }
+  const a = document.createElement('a'); a.href = REC.url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  $('clipNote').textContent = 'Downloaded. On iPhone it lands in Files, under Downloads.';
+}
+function dropClip(){
+  $('clip').hidden = true; $('clipVid').removeAttribute('src');
+  if (REC.url) URL.revokeObjectURL(REC.url); REC.url = null; REC.blob = null;
+}
+function loopRec(){
+  if (!REC.on) return;
+  REC.raf = requestAnimationFrame(loopRec);
+  drawFrame();
+  const el = now() - REC.t0, sec = Math.floor(el/1000);
+  if (sec !== REC.tick){ REC.tick = sec; $('recTime').textContent = 'REC ' + Math.floor(sec/60) + ':' + String(sec%60).padStart(2, '0'); }
+  if (el > REC_MAX){ stopRec(); toast('Clips stop at 3 minutes.'); }
+}
+
+function drawFrame(){
+  const ctx = REC.ctx, W = innerWidth, H = innerHeight;
+  const k = Math.max(OUT_W/W, OUT_H/H), offX = (OUT_W - W*k)/2;
+  // keep the card in the frame when the screen is taller than 9:16
+  let want = (OUT_H - H*k)/2;
+  if (!card.hidden){
+    const r = card.getBoundingClientRect(), m = 48;
+    if (r.bottom*k + want > OUT_H - m) want = OUT_H - m - r.bottom*k;
+    if (r.top*k + want < m) want = m - r.top*k;
+  }
+  want = clamp(want, OUT_H - H*k, 0);
+  REC.offY = REC.offY == null ? want : REC.offY + (want - REC.offY) * 0.15;
+  ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, OUT_W, OUT_H);
+  ctx.setTransform(k, 0, 0, k, offX, REC.offY);
+  // base picture
+  const v = $('cam');
+  if (S.mode === 'live' && !v.hidden && v.videoWidth){
+    const s = Math.max(W/v.videoWidth, H/v.videoHeight), w = v.videoWidth*s, h = v.videoHeight*s;
+    ctx.save();
+    if (v.classList.contains('mirror')){ ctx.translate(W, 0); ctx.scale(-1, 1); }
+    ctx.drawImage(v, (W-w)/2, (H-h)/2, w, h); ctx.restore();
+  } else if (S.mode === 'demo' && !$('scene').hidden){
+    ctx.drawImage($('scene'), 0, 0, W, H);
+  }
+  // face marks
+  ctx.drawImage(ov, 0, 0, W, H);
+  if (!card.hidden) drawCardTo(ctx, k);
+}
+
+/* card painter: reads the live card's layout and paints it with the same look */
+function rr(ctx, x, y, w, h, r){ ctx.beginPath(); ctx.moveTo(x+r, y); ctx.arcTo(x+w, y, x+w, y+h, r); ctx.arcTo(x+w, y+h, x, y+h, r); ctx.arcTo(x, y+h, x, y, r); ctx.arcTo(x, y, x+w, y, r); ctx.closePath(); }
+function fontOf(cs){ return (cs.fontStyle === 'italic' ? 'italic ' : '') + cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily; }
+function shadowOn(ctx, k, on){
+  if (on){ ctx.shadowColor = 'rgba(0,0,0,.85)'; ctx.shadowBlur = 3*k; ctx.shadowOffsetY = 1*k; }
+  else { ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; }
+}
+// collect styled word runs from an element and its inline children
+function runsOf(el){
+  const out = [];
+  const add = (text, cs) => {
+    const ls = parseFloat(cs.letterSpacing) || 0;
+    text.split(/(\s+)/).forEach(w => { if (w) out.push({w: /^\s+$/.test(w) ? ' ' : w, font: fontOf(cs), color: cs.color, ls}); });
+  };
+  const ecs = getComputedStyle(el);
+  el.childNodes.forEach(n => {
+    if (n.nodeType === 3) add(n.textContent, ecs);
+    else if (n.nodeType === 1){ const cs = getComputedStyle(n); if (cs.display !== 'none') add(n.textContent + (cs.marginRight && parseFloat(cs.marginRight) > 0 ? ' ' : ''), cs); }
+  });
+  return out;
+}
+function widthOf(ctx, r){ ctx.font = r.font; return ctx.measureText(r.w).width + r.ls * r.w.length; }
+function paintRun(ctx, r, x, y){
+  ctx.font = r.font; ctx.fillStyle = r.color;
+  if (!r.ls){ ctx.fillText(r.w, x, y); return; }
+  for (const ch of r.w){ ctx.fillText(ch, x, y); x += ctx.measureText(ch).width + r.ls; }
+}
+// paint an element's text inside its own box, wrapping like the page does
+function paintText(ctx, el, k, opts={}){
+  if (!el || !el.textContent.trim()) return;
+  const cs = getComputedStyle(el); if (cs.display === 'none') return;
+  const box = el.getBoundingClientRect(); if (!box.width) return;
+  const alpha = parseFloat(cs.opacity); if (alpha < 0.2) return;
+  const fs = parseFloat(cs.fontSize), lh = parseFloat(cs.lineHeight) || fs*1.3;
+  const runs = runsOf(el), lines = [[]]; let lw = 0;
+  ctx.save(); ctx.globalAlpha *= alpha; ctx.textBaseline = 'middle';
+  if (opts.oneLine){
+    // label stays, the tail is trimmed from the left to fit
+    let total = runs.reduce((a, r) => a + widthOf(ctx, r), 0);
+    let i = runs.findIndex((r, j) => j > 0 && runs[j-1].font !== r.font) ; if (i < 0) i = 1;
+    while (total > box.width && runs.length > i + 1){ total -= widthOf(ctx, runs[i]); runs.splice(i, 1); }
+    lines[0] = runs;
+  } else {
+    for (const r of runs){
+      const w = widthOf(ctx, r);
+      if (r.w === ' '){ if (lines[lines.length-1].length){ lines[lines.length-1].push(r); lw += w; } continue; }
+      if (lw + w > box.width + 0.5 && lines[lines.length-1].length){
+        const L = lines[lines.length-1]; while (L.length && L[L.length-1].w === ' ') L.pop();
+        lines.push([]); lw = 0;
+      }
+      lines[lines.length-1].push(r); lw += w;
+    }
+  }
+  shadowOn(ctx, k, opts.shadow);
+  lines.forEach((L, i) => { let x = box.left; const y = box.top + i*lh + lh/2; for (const r of L){ paintRun(ctx, r, x, y); x += widthOf(ctx, r); } });
+  ctx.restore();
+}
+function drawCardTo(ctx, k){
+  const cs = getComputedStyle(card), b = card.getBoundingClientRect();
+  const s = parseFloat(cs.getPropertyValue('--s')) || 1, rad = 16*s, clean = card.classList.contains('clean');
+  ctx.save(); ctx.globalAlpha = parseFloat(cs.opacity) || 1;
+  rr(ctx, b.left, b.top, b.width, b.height, rad);
+  if (clean){
+    ctx.fillStyle = 'rgba(255,255,255,.02)'; ctx.fill();
+    ctx.lineWidth = 0.75; ctx.strokeStyle = 'rgba(190,90,175,.85)'; ctx.stroke();
+  } else {
+    const g = ctx.createLinearGradient(0, b.top, 0, b.bottom); g.addColorStop(0, '#221a3a'); g.addColorStop(1, '#1a1430');
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 40*k; ctx.shadowOffsetY = 18*k; ctx.fillStyle = g; ctx.fill(); ctx.restore();
+    ctx.save(); ctx.clip();
+    const bar = ctx.createLinearGradient(b.left, 0, b.right, 0); bar.addColorStop(0, '#A72D91'); bar.addColorStop(1, '#ED7D1B');
+    ctx.fillStyle = bar; ctx.fillRect(b.left, b.top, b.width, 3); ctx.restore();
+    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,.08)'; rr(ctx, b.left, b.top, b.width, b.height, rad); ctx.stroke();
+  }
+  // header: logo and two-tone wordmark (the Clean switch is a control, so it stays out)
+  const logo = card.querySelector('.chd img'), lr = logo.getBoundingClientRect();
+  if (logo.complete && logo.naturalWidth){ shadowOn(ctx, k, clean); ctx.drawImage(logo, lr.left, lr.top, lr.width, lr.height); shadowOn(ctx, k, false); }
+  paintText(ctx, card.querySelector('.chd .wm'), k, {shadow: clean, oneLine: true});
+  if (!$('demoTag').hidden) paintText(ctx, $('demoTag'), k, {shadow: clean, oneLine: true});
+  // nudge
+  const cap = getComputedStyle(capEl);
+  ctx.save(); ctx.globalAlpha *= parseFloat(cap.opacity) || 1;
+  paintText(ctx, obsEl, k, {shadow: clean}); paintText(ctx, sugEl, k, {shadow: clean});
+  ctx.restore();
+  paintText(ctx, $('heard'), k, {shadow: clean, oneLine: true});
+  // earlier nudges, clipped to the feed's own box
+  const feed = $('feed');
+  if (!clean && getComputedStyle(feed).display !== 'none'){
+    const fr = feed.getBoundingClientRect();
+    ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.09)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(fr.left, fr.top); ctx.lineTo(fr.right, fr.top); ctx.stroke();
+    ctx.beginPath(); ctx.rect(fr.left, fr.top, fr.width, fr.height); ctx.clip();
+    feed.querySelectorAll('.fh,.tm,.o,.g').forEach(el => { const r = el.getBoundingClientRect(); if (r.bottom > fr.top && r.top < fr.bottom) paintText(ctx, el, k, {oneLine: el.classList.contains('fh') || el.classList.contains('tm')}); });
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
 function init(){
   setClean(store.get('clean', true));
   syncMic(); syncWords(); syncClaude(); fitOverlay(); bindDrag();
@@ -1047,7 +1291,7 @@ function init(){
   $('cleanSw').onclick = () => setClean(!card.classList.contains('clean'));
   $('cleanSw2').onclick = () => setClean(!card.classList.contains('clean'));
   $('micBtn').onclick = toggleMic; $('micSw').onclick = toggleMic;
-  $('flipBtn').onclick = async () => { S.facing = S.facing === 'user' ? 'environment' : 'user'; try{ await openCamera(); }catch(e){ toast('Could not switch cameras.'); } S.track = null; };
+  $('flipBtn').onclick = async () => { if (REC.on){ toast('Stop recording to switch cameras.'); return; } S.facing = S.facing === 'user' ? 'environment' : 'user'; try{ await openCamera(); }catch(e){ toast('Could not switch cameras.'); } S.track = null; };
   $('moreBtn').onclick = () => { renderPeople(); $('more').hidden = false; };
   $('closeMore').onclick = () => { $('more').hidden = true; };
   $('more').addEventListener('click', e => { if (e.target === $('more')) $('more').hidden = true; });
@@ -1056,10 +1300,15 @@ function init(){
   $('switchMode').onclick = () => { $('more').hidden = true; if (S.mode === 'live'){ stopStream(); $('cam').hidden = true; startDemo(); } else { $('start').hidden = true; startLive(); } };
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible'){ wakeLock(); if (S.mode === 'live' && !S.stream) openCamera().catch(() => {}); if (S.mode === 'live') setTimeout(startWords, 600); if (S.audio) S.audio.ctx.resume(); }
-    else if (S.mode === 'live'){ stopStream(); stopWords(); }
+    else if (S.mode === 'live'){ if (REC.on) stopRec(); stopStream(); stopWords(); }
+    if (document.visibilityState === 'visible') checkVersion();
   });
   addEventListener('pagehide', () => { stopStream(); stopWords(); S.people = []; });
   $('wordsSw').onclick = toggleWords;
+  $('recBtn').onclick = () => REC.on ? stopRec() : startRec();
+  $('clipSave').onclick = saveClip; $('clipDrop').onclick = dropClip; $('clipClose').onclick = () => { $('clip').hidden = true; };
+  $('ver').textContent = 'Glass version ' + BUILD;
+  checkVersion();
   $('claudeSw').onclick = toggleClaude;
   $('passIn').value = store.get('pass', '');
   $('passIn').addEventListener('change', () => { store.set('pass', $('passIn').value.trim()); CL.backoffUntil = 0; CL.status = ''; syncClaude(); });
