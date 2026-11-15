@@ -137,6 +137,10 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--viola-soft
 .btn{height:52px;border-radius:26px;font-size:16px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:10px}
 .btn.primary{background:linear-gradient(90deg,var(--viola),#c2449f);box-shadow:0 10px 30px rgba(167,45,145,.35)}
 .btn.ghost{border:.5px solid rgba(255,255,255,.3);background:rgba(255,255,255,.04)}
+#paused{justify-content:center;background:rgba(8,5,16,.82);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+#paused .pz{padding:0 max(28px,env(safe-area-inset-right,0px)) 0 max(28px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:12px}
+#paused h2{font-size:22px;font-weight:600;margin:0}#paused p{margin:0 0 10px;color:rgba(255,255,255,.7);font-size:15px;line-height:1.45}
+.link.end{color:#ff8fa3}
 .btn[disabled]{opacity:.6}
 .fine{font-size:12.5px;line-height:1.5;color:var(--ink-3);text-align:center;text-wrap:balance}
 .note{font-size:13.5px;line-height:1.45;color:#ffd2a8;background:rgba(237,125,27,.12);border:.5px solid rgba(237,125,27,.4);border-radius:12px;padding:10px 12px}
@@ -234,9 +238,17 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--viola-soft
     </div>
   </div>
 
+  <div class="sheet" id="paused" hidden>
+    <div class="pz"><h2>Paused</h2><p>Glass went to the background, so the camera and microphone are off.</p>
+      <button class="btn primary" id="resumeBtn">Resume</button>
+      <button class="btn ghost" id="pEndBtn">End session</button></div>
+  </div>
+
   <div class="sheet" id="more" hidden>
     <div class="panel" role="dialog" aria-label="Settings">
       <div class="sheet-h"><h2>Nerovion Glass</h2><button class="link" id="closeMore">Done</button></div>
+      <div class="row" id="endRow" hidden><div class="lab"><b>End session</b><small>Turns off the camera and microphone right away.</small></div>
+        <button class="link end" id="endBtn">End</button></div>
       <div class="row"><div class="lab"><b>Conversation</b><small>Casual for everyday talk. Sales for client and prospect calls.</small></div>
         <div class="seg" id="ctxSeg" role="radiogroup" aria-label="Conversation"><button role="radio" data-ctx="casual">Casual</button><button role="radio" data-ctx="sales">Sales</button></div></div>
       <div class="row"><div class="lab"><b>Sound reading</b><small>Loudness only, to tell when you're talking and when they're done.</small></div>
@@ -295,6 +307,8 @@ const SPEED = Math.max(1, +(new URLSearchParams(location.search).get('speed')) |
 /* ---------------- State ---------------- */
 const S = {
   mode: 'idle',          // idle | live | demo
+  paused: false,         // live session put away: camera and mic are off until a tap
+  camGen: 0,
   facing: 'environment',
   stream: null,
   models: false,
@@ -802,7 +816,7 @@ function syncWords(){
   $('wordsStatus').textContent = S.words && WD.status ? 'Now: ' + WD.status + '. Heard so far: ' + (c.me||0) + ' from you, ' + (c.them||0) + ' from the person you face, ' + (c.room||0) + ' with no face in view.' : '';
 }
 function startWords(){
-  if (!S.words || S.mode !== 'live' || WD.rec || WD.blocked || document.visibilityState !== 'visible') return;
+  if (!S.words || S.mode !== 'live' || S.paused || WD.rec || WD.blocked || document.visibilityState !== 'visible') return;
   if (!SRC){ WD.status = 'not available in this browser'; syncWords(); return; }
   const r = new SRC();
   r.lang = navigator.language || 'en-US'; r.continuous = true; r.interimResults = true; r.maxAlternatives = 1;
@@ -828,7 +842,7 @@ function startWords(){
     } else if (e.error !== 'no-speech' && e.error !== 'aborted'){ WD.fails++; WD.status = 'paused (' + e.error + '), retrying'; }
     syncWords();
   };
-  r.onend = () => { if (WD.rec === r) WD.rec = null; if (S.words && S.mode === 'live' && !WD.blocked) setTimeout(startWords, WD.fails > 3 ? 6000 : 300); };
+  r.onend = () => { if (WD.rec === r) WD.rec = null; clearTimeout(WD.restartT); if (S.words && S.mode === 'live' && !S.paused && !WD.blocked) WD.restartT = setTimeout(startWords, WD.fails > 3 ? 6000 : 300); };
   try{ r.start(); WD.rec = r; WD.status = 'listening'; WD.startedAt = now(); }catch(e){ WD.status = 'could not start'; }
   syncWords();
 }
@@ -841,7 +855,8 @@ function wordsWatch(voice){
     WD.lastKick = t; const r = WD.rec; try{ r.stop(); }catch(e){}
   }
 }
-function stopWords(){ const r = WD.rec; WD.rec = null; clearTimeout(WD.pendT); WD.pend = null; if (r){ r.onend = null; try{ r.abort(); }catch(e){} } }
+function stopWords(){ const r = WD.rec; WD.rec = null; clearTimeout(WD.pendT); clearTimeout(WD.restartT); WD.pend = null;
+  if (r){ r.onend = r.onresult = r.onerror = r.onstart = r.onaudiostart = null; try{ r.stop(); }catch(e){} try{ r.abort(); }catch(e){} } }
 function toggleWords(){
   S.words = !S.words; WD.blocked = false; WD.fails = 0; WD.status = '';
   if (S.words) startWords(); else { stopWords(); $('heard').classList.remove('on'); }
@@ -981,11 +996,12 @@ async function liveStep(t, dt){
 /* ---------------- Live camera ---------------- */
 async function openCamera(){
   stopStream();
-  const wantAudio = S.mic;
+  const gen = ++S.camGen, wantAudio = S.mic;
   const c = {video:{facingMode:{ideal:S.facing}, width:{ideal:1280}, height:{ideal:720}}, audio: wantAudio ? {echoCancellation:false, noiseSuppression:false, autoGainControl:true} : false};
   let st;
   try{ st = await navigator.mediaDevices.getUserMedia(c); }
   catch(e){ if (wantAudio){ st = await navigator.mediaDevices.getUserMedia({video:c.video, audio:false}); toast('Microphone is off, so sound reading is off.'); S.mic = false; syncMic(); } else throw e; }
+  if (gen !== S.camGen || S.paused || document.visibilityState !== 'visible'){ st.getTracks().forEach(t => t.stop()); throw new Error('stale'); }
   S.stream = st;
   const v = $('cam'); v.srcObject = st; v.hidden = false; v.classList.toggle('mirror', S.facing === 'user');
   await v.play().catch(() => {});
@@ -994,6 +1010,33 @@ async function openCamera(){
 function stopStream(){
   if (S.stream){ S.stream.getTracks().forEach(t => t.stop()); S.stream = null; }
   if (S.audio){ try{ S.audio.ctx.close(); }catch(e){} S.audio = null; }
+  const v = $('cam'); if (v.srcObject){ try{ v.pause(); }catch(e){} v.srcObject = null; }
+}
+// everything that can hold the camera or microphone, in one place
+function releaseMedia(){
+  S.camGen++;
+  if (REC.on) stopRec();
+  stopWords(); stopStream();
+  if (wl){ try{ wl.release(); }catch(e){} wl = null; }
+}
+function pauseLive(){
+  if (S.mode !== 'live' || S.paused) return;
+  S.paused = true; releaseMedia();
+  $('more').hidden = true; $('paused').hidden = false;
+}
+async function resumeLive(){
+  if (S.mode !== 'live' || !S.paused) return;
+  S.paused = false; $('paused').hidden = true;
+  try{ await openCamera(); }catch(e){ if (e && e.message === 'stale') return; toast('Could not reopen the camera. Tap Resume again.'); S.paused = true; $('paused').hidden = false; return; }
+  wakeLock(); WD.blocked = false; startWords();
+}
+function endSession(){
+  releaseMedia(); stopDemo();
+  S.paused = false; S.running = false; S.mode = 'idle'; forget(true);
+  $('paused').hidden = true; $('more').hidden = true; $('rail').hidden = true; card.hidden = true; $('cam').hidden = true;
+  $('startBtn').disabled = false; $('startBtn').textContent = 'Start camera'; $('camNote').hidden = true;
+  $('start').hidden = false;
+  toast('Session ended. Camera and microphone are off.');
 }
 async function startLive(){
   $('startBtn').disabled = true; $('startBtn').textContent = 'Opening camera…';
@@ -1003,6 +1046,7 @@ async function startLive(){
   }catch(e){
     console.warn(e);
     $('startBtn').disabled = false; $('startBtn').textContent = 'Start camera';
+    if (e && e.message === 'stale') return;
     const n = $('camNote'); n.hidden = false;
     n.textContent = e && e.name === 'NotAllowedError'
       ? 'Camera access was turned down. Allow the camera for this page in Settings, then try again. The demo works without it.'
@@ -1019,7 +1063,7 @@ function enterApp(mode){
   stopDemo(); if (mode !== 'live') stopWords();
   S.mode = mode; $('start').hidden = true; $('rail').hidden = false; card.hidden = false;
   $('demoTag').hidden = mode !== 'demo';
-  $('flipBtn').hidden = mode !== 'live';
+  $('flipBtn').hidden = mode !== 'live'; $('endRow').hidden = false; S.paused = false;
   $('modeLabel').textContent = mode === 'live' ? 'Live camera' : 'Demo';
   $('switchMode').textContent = mode === 'live' ? 'Show demo' : 'Use camera';
   forget(true);
@@ -1107,7 +1151,7 @@ function syncCtx(){ $('ctxSeg').querySelectorAll('button').forEach(b => b.setAtt
 function syncMic(){ $('micSw').setAttribute('aria-checked', S.mic); $('micBtn').classList.toggle('off', !S.mic); store.set('mic', S.mic); }
 async function toggleMic(){
   S.mic = !S.mic; syncMic();
-  if (S.mode === 'live' && S.mic && !S.audio){ try{ await openCamera(); }catch(e){} }
+  if (S.mode === 'live' && !S.paused && S.mic && !S.audio){ try{ await openCamera(); }catch(e){} }
   if (!S.mic && S.stream){ S.stream.getAudioTracks().forEach(t => { t.stop(); S.stream.removeTrack(t); }); if (S.audio){ try{ S.audio.ctx.close(); }catch(e){} S.audio = null; } }
   toast(S.mic ? 'Sound reading on. Loudness only.' : 'Sound reading off.');
 }
@@ -1115,7 +1159,7 @@ let wl = null;
 async function wakeLock(){ try{ if ('wakeLock' in navigator && document.visibilityState === 'visible') wl = await navigator.wakeLock.request('screen'); }catch(e){} }
 
 /* ---------------- Version check ---------------- */
-const BUILD = '2026-11-15.1105';
+const BUILD = '2026-11-15.1233';
 async function checkVersion(){
   if (BUILD.startsWith('__') || !/^https?:/.test(location.protocol)) return;
   try{
@@ -1345,13 +1389,17 @@ function init(){
   $('more').addEventListener('click', e => { if (e.target === $('more')) $('more').hidden = true; });
   $('forgetBtn').onclick = () => { forget(false); setPill('none', 'Looking for a face'); };
   $('resetCard').onclick = () => { cardPos = placeCard({}); store.set('card', {}); };
-  $('switchMode').onclick = () => { $('more').hidden = true; if (S.mode === 'live'){ stopStream(); $('cam').hidden = true; startDemo(); } else { $('start').hidden = true; startLive(); } };
+  $('switchMode').onclick = () => { $('more').hidden = true; if (S.mode === 'live'){ releaseMedia(); S.paused = false; $('paused').hidden = true; $('cam').hidden = true; startDemo(); } else { $('start').hidden = true; startLive(); } };
+  // leaving the app releases the camera and microphone; coming back waits for a tap on Resume
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible'){ wakeLock(); if (S.mode === 'live' && !S.stream) openCamera().catch(() => {}); if (S.mode === 'live') setTimeout(startWords, 600); if (S.audio) S.audio.ctx.resume(); }
-    else if (S.mode === 'live'){ if (REC.on) stopRec(); stopStream(); stopWords(); }
-    if (document.visibilityState === 'visible') checkVersion();
+    if (document.visibilityState === 'visible'){ if (S.mode !== 'live') wakeLock(); checkVersion(); }
+    else { if (S.mode === 'live') pauseLive(); else releaseMedia(); }
   });
-  addEventListener('pagehide', () => { stopStream(); stopWords(); S.people = []; });
+  addEventListener('pagehide', () => { if (S.mode === 'live') pauseLive(); releaseMedia(); S.people = []; });
+  addEventListener('beforeunload', () => { releaseMedia(); });
+  document.addEventListener('freeze', () => { if (S.mode === 'live') pauseLive(); releaseMedia(); });
+  $('resumeBtn').onclick = resumeLive;
+  $('pEndBtn').onclick = endSession; $('endBtn').onclick = endSession;
   $('wordsSw').onclick = toggleWords;
   syncCtx(); $('ctxSeg').querySelectorAll('button').forEach(b => b.onclick = () => { S.ctx = b.dataset.ctx; store.set('ctx', S.ctx); syncCtx(); toast(S.ctx === 'sales' ? 'Sales mode: nudges for client calls.' : 'Casual mode: nudges for everyday talk.'); });
   $('recBtn').onclick = () => REC.on ? stopRec() : startRec();
@@ -1362,7 +1410,7 @@ function init(){
   $('passIn').value = store.get('pass', '');
   $('passIn').addEventListener('change', () => { store.set('pass', $('passIn').value.trim()); CL.backoffUntil = 0; CL.status = ''; syncClaude(); });
   // Safari may only start listening from a tap, so the first tap starts it if it isn't running
-  document.addEventListener('pointerdown', () => { if (S.mode === 'live' && S.words && !WD.rec) { WD.blocked = false; startWords(); } }, true);
+  document.addEventListener('pointerdown', () => { if (S.mode === 'live' && !S.paused && S.words && !WD.rec) { WD.blocked = false; startWords(); } }, true);
   setTimeout(() => { if (!new URLSearchParams(location.search).has('nopreload')) loadModels(); }, 400);
   const ios = /iPhone|iPad|iPod/.test(navigator.userAgent), standalone = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
   $('a2hs').hidden = !(ios && !standalone);
