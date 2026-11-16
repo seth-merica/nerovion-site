@@ -1098,7 +1098,7 @@ const PLAN = [
   [58,'scene','p1'], [64,'say','That makes sense, what are the next steps'], [72.5,'cue','nod'], [81,'loop']
 ];
 // the reel: a short clip of someone talking, with cards timed to what she says (seconds into the clip)
-const REEL = {src:'demo/reel.mp4', lines:[
+const REEL = {src:'demo/reel.mp4?v=2026-11-16.0110', lines:[
   {end:1.6, say:'I just got back from Santa Monica.', obs:'She just got back from a trip.', sug:'How was Santa Monica?'},
   {end:4.6, say:'The sunsets there were unreal.', obs:'She lit up talking about the sunsets.', sug:'What was your favorite spot?'},
   {end:7.6, say:'I’d go back in a heartbeat.', obs:'She wants to go back.', sug:'When are you heading back?'}
@@ -1235,7 +1235,7 @@ let wl = null;
 async function wakeLock(){ try{ if ('wakeLock' in navigator && document.visibilityState === 'visible') wl = await navigator.wakeLock.request('screen'); }catch(e){} }
 
 /* ---------------- Version check ---------------- */
-const BUILD = '2026-11-16.0104';
+const BUILD = '2026-11-16.0110';
 async function checkVersion(){
   if (BUILD.startsWith('__') || !/^https?:/.test(location.protocol)) return;
   try{
