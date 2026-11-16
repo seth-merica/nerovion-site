@@ -50,6 +50,9 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--viola-soft
 .dcap .k b{color:#fff;font-weight:700}.dcap .k span{color:#ef9be0;font-weight:700}
 .dcap .d{margin-top:6px;font-size:15px;line-height:1.35;font-weight:500;color:#fff}
 #overlay{pointer-events:none}
+#stage{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+.pill.scr{padding:0 12px;color:rgba(255,255,255,.85);font-variant-numeric:tabular-nums}
+.pill.scr.done{color:var(--orange)}
 #stage.drift{animation:drift 14s ease-in-out infinite alternate}
 @keyframes drift{from{transform:scale(1.02) translate(0,0)}to{transform:scale(1.06) translate(-1%,-.6%)}}
 
@@ -201,6 +204,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--viola-soft
 
   <div class="rail" id="rail" hidden>
     <div class="pill" id="pill" data-s="none" role="status" aria-live="polite"><i></i><span id="pillText">Looking for a face</span></div>
+    <div class="pill scr" id="scrChip" hidden><span id="scrText">Script ready</span></div>
     <div class="sp"></div>
     <button class="ib" id="micBtn" aria-label="Sound reading" title="Sound reading"><span class="meter" id="meter"></span>
       <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg></button>
@@ -257,6 +261,10 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--viola-soft
       <div class="sheet-h"><h2>Nerovion Glass</h2><button class="link" id="closeMore">Done</button></div>
       <div class="row" id="endRow" hidden><div class="lab"><b>End session</b><small>Turns off the camera and microphone right away.</small></div>
         <button class="link end" id="endBtn">End</button></div>
+      <div class="row" id="scriptRow" hidden><div class="lab"><b>Scripted demo</b><small>Shows the demo script's cards in order on the live camera. Tap the screen after each of her lines for the next card. Press and hold to go back one. Starting a recording starts the script from the top.</small><span class="now" id="scriptStatus"></span></div>
+        <button class="link" id="scriptBtn">Start</button></div>
+      <div class="row" id="scriptRestartRow" hidden><div class="lab"><b>Restart script</b><small>Back to the first card and clears earlier cards.</small></div>
+        <button class="link" id="scriptRestart">Restart</button></div>
       <div class="row"><div class="lab"><b>Conversation</b><small>Casual for everyday talk. Sales for client and prospect calls.</small></div>
         <div class="seg" id="ctxSeg" role="radiogroup" aria-label="Conversation"><button role="radio" data-ctx="casual">Casual</button><button role="radio" data-ctx="sales">Sales</button></div></div>
       <div class="row"><div class="lab"><b>Sound reading</b><small>Loudness only, to tell when you're talking and when they're done.</small></div>
@@ -335,6 +343,7 @@ const S = {
   lastFace: null,
   audio: null,
   demo: null,
+  script: null,          // scripted demo: {i} = cards shown so far
 };
 
 /* ---------------- Card ---------------- */
@@ -432,6 +441,7 @@ function renderFeed(){
 function cue(id, person, vars, force){
   const def = CUES[id]; if (!def) return;
   if (S.demo && S.demo.reel && !force) return;
+  if (S.script && !force) return;
   const t = now();
   const p = person || S.current;
   const cdm = p ? p.cueAt : C.cueAt;
@@ -477,7 +487,7 @@ function cardTick(){
       if (t - q.at < 12000 && (q.person === S.current || q.id === 'none')){ C.id = 'idle'; cue(q.id, q.person, q.vars); }
     }
   }
-  if (C.id && C.id !== 'none' && C.id !== 'idle' && t - C.shownAt > IDLE_AFTER && S.current){
+  if (!S.script && C.id && C.id !== 'none' && C.id !== 'idle' && t - C.shownAt > IDLE_AFTER && S.current){
     showLine('Reading ' + S.current.name + '.', '', {quiet:true}); C.id = 'idle'; C.pri = 0; C.shownAt = t;
   }
 }
@@ -621,7 +631,7 @@ function iou(a, b){
 function meanOf(list){ const m = new Float32Array(128); for (const d of list) for (let i=0;i<128;i++) m[i]+=d[i]; for (let i=0;i<128;i++) m[i]/=list.length; return m; }
 function dist(a, b){ let s = 0; for (let i=0;i<128;i++){ const d = a[i]-b[i]; s += d*d; } return Math.sqrt(s); }
 function newPerson(desc){
-  const p = {id: S.people.length+1, name: 'Person ' + (S.people.length+1), samples:[desc], mean: desc, cueAt:{}, ema:{}, sig:freshSig(), seenAt: now()};
+  const p = {id: S.people.length+1, name: S.script ? SCRIPT.name : 'Person ' + (S.people.length+1), samples:[desc], mean: desc, cueAt:{}, ema:{}, sig:freshSig(), seenAt: now()};
   S.people.push(p); return p;
 }
 function identify(desc){
@@ -653,6 +663,7 @@ function enterPerson(p, created){
   if (created) cue('newPerson', p);
   else if (awayFor > AWAY_FOR_RETURN) cue('returning', p);
   else if (C.pri >= 3 || C.id === 'none'){ showLine('Reading ' + p.name + '.', '', {quiet:true}); C.id = 'idle'; C.pri = 0; C.shownAt = now(); }
+  if (S.script && (!C.id || C.id === 'idle' || C.id === 'none' || C.id === 'warm')){ showLine('Reading ' + p.name + '.', '', {quiet:true}); C.id = 'idle'; C.pri = 0; C.shownAt = now(); }
   setPill(created ? 'new' : 'face', p.name, created ? 'NEW' : '');
   if (created) setTimeout(() => { if (S.current === p) setPill('face', p.name); }, 3500);
   renderPeople();
@@ -825,7 +836,7 @@ function syncWords(){
   $('wordsStatus').textContent = S.words && WD.status ? 'Now: ' + WD.status + '. Heard so far: ' + (c.me||0) + ' from you, ' + (c.them||0) + ' from the person you face, ' + (c.room||0) + ' with no face in view.' : '';
 }
 function startWords(){
-  if (!S.words || S.mode !== 'live' || S.paused || WD.rec || WD.blocked || document.visibilityState !== 'visible') return;
+  if (!S.words || S.script || S.mode !== 'live' || S.paused || WD.rec || WD.blocked || document.visibilityState !== 'visible') return;
   if (!SRC){ WD.status = 'not available in this browser'; syncWords(); return; }
   const r = new SRC();
   r.lang = navigator.language || 'en-US'; r.continuous = true; r.interimResults = true; r.maxAlternatives = 1;
@@ -1041,21 +1052,22 @@ async function resumeLive(){
 }
 function endSession(){
   releaseMedia(); stopDemo();
-  S.paused = false; S.running = false; S.mode = 'idle'; forget(true); clearHistory();
+  S.paused = false; S.running = false; S.mode = 'idle'; S.script = null; syncScript(); forget(true); clearHistory();
   $('paused').hidden = true; $('more').hidden = true; $('rail').hidden = true; card.hidden = true; $('cam').hidden = true;
-  $('startBtn').disabled = false; $('startBtn').textContent = 'Start camera'; $('camNote').hidden = true;
+  $('startBtn').disabled = false; $('startBtn').textContent = startLabel(); $('camNote').hidden = true;
   $('start').hidden = false;
   toast('Session ended. Camera and microphone are off.');
 }
 async function startLive(){
   clearHistory();
+  if (WANT_SCRIPT && !S.mic){ S.mic = true; syncMic(); }
   $('startBtn').disabled = true; $('startBtn').textContent = 'Opening camera…';
   try{
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('nocam');
     await openCamera();
   }catch(e){
     console.warn(e);
-    $('startBtn').disabled = false; $('startBtn').textContent = 'Start camera';
+    $('startBtn').disabled = false; $('startBtn').textContent = startLabel();
     if (e && e.message === 'stale') return;
     const n = $('camNote'); n.hidden = false;
     n.textContent = e && e.name === 'NotAllowedError'
@@ -1064,6 +1076,7 @@ async function startLive(){
     return;
   }
   enterApp('live');
+  if (WANT_SCRIPT) setScript(true, true);
   WD.myQAt = now(); startWords();
   if (!S.models){ showLine('Getting the face tool ready.', 'First start can take a minute. Later starts are quicker.', {quiet:true}); C.id = 'warm'; }
   const ok = await loadModels();
@@ -1071,9 +1084,10 @@ async function startLive(){
 }
 function enterApp(mode){
   stopDemo(); if (mode !== 'live') stopWords();
+  if (mode !== 'live'){ S.script = null; syncScript(); }
   S.mode = mode; $('start').hidden = true; $('rail').hidden = false; card.hidden = false;
   $('demoTag').hidden = mode !== 'demo';
-  $('flipBtn').hidden = mode !== 'live'; $('endRow').hidden = false; S.paused = false;
+  $('flipBtn').hidden = mode !== 'live'; $('endRow').hidden = false; $('scriptRow').hidden = mode !== 'live'; S.paused = false;
   $('modeLabel').textContent = mode === 'live' ? 'Live camera' : 'Demo';
   $('switchMode').textContent = mode === 'live' ? 'Show demo' : 'Use camera';
   forget(true); clearHistory();
@@ -1101,7 +1115,7 @@ const PLAN = [
 ];
 // the reel: a short clip of someone talking, with cards timed to what she says (seconds into the clip)
 // the story runs on its own clock: a new nudge every EVERY seconds, all of them before any repeats
-const REEL = {src:'demo/reel.mp4?v=2026-11-16.0132', first:1.5, every:5.5, lines:[
+const REEL = {src:'demo/reel.mp4?v=2026-11-16.0229', first:1.5, every:5.5, lines:[
   {say:'I just got back from Santa Monica.', obs:'She just got back from a trip.', sug:'How was Santa Monica?'},
   {say:'The sunsets there were unreal.', obs:'Big smile on the sunsets.', sug:'What was your favorite spot to watch them?'},
   {say:'We walked the pier almost every night.', obs:'The pier was a highlight for her.', sug:'What was the best part of the pier?'},
@@ -1225,6 +1239,90 @@ async function demoStep(t, dt){
   }
 }
 
+/* ---------------- Scripted demo ----------------
+   For filming a demo reel on the live camera: the cards come from a written
+   script, one per tap, so the reel shows the card that matches each line.
+   Auto nudges and speech-to-text stay off; the mic stays on for the clip. */
+const WANT_SCRIPT = new URLSearchParams(location.search).has('script');
+const SCRIPT = {name:'Izzy', beats:[
+  {heard:'I love it. Look at that view.', obs:'She lit up at the view.', sug:'What’s your favorite part so far?'},
+  {heard:'Probably the quiet. After this week, I needed it.', obs:'She paused before she answered.', sug:'Big week. How are you feeling now?'},
+  {heard:'Tired, but happy. The team did amazing.', obs:'Tired, and proud of the team.', sug:'You were amazing in there too.'},
+  {heard:'Stop. Okay, thank you. So what’s the plan tomorrow?', obs:'She asked about tomorrow.', sug:'Offer one idea, then ask what she wants.'},
+  {heard:'Yes! Snorkeling. And dinner on the beach after.', obs:'Big yes. She’s leaning in.', sug:'Lock in a time while she’s excited.'},
+  {heard:'Nine? We’re on vacation.', obs:'Eyebrows up. Nine felt early.', sug:'Meet her halfway.'},
+  {heard:'Deal.', obs:'She’s smiling. You read that right.', sug:''}
+]};
+function startLabel(){ return WANT_SCRIPT ? 'Start scripted demo' : 'Start camera'; }
+function syncScript(){
+  const on = !!S.script, n = SCRIPT.beats.length, i = on ? S.script.i : 0;
+  $('scrChip').hidden = !on; $('scrChip').classList.toggle('done', on && i >= n);
+  $('scrText').textContent = !on ? '' : i === 0 ? 'Script ready' : i >= n ? 'Script done' : 'Card ' + i + ' of ' + n;
+  $('scriptBtn').textContent = on ? 'Stop' : 'Start';
+  $('scriptRestartRow').hidden = !on;
+  $('scriptStatus').textContent = on ? 'On. ' + (i === 0 ? 'No cards shown yet.' : i + ' of ' + n + ' cards shown.') : '';
+}
+function scriptIdle(){
+  const nm = S.current ? S.current.name : '';
+  showLine(nm ? 'Reading ' + nm + '.' : 'Listening.', '', {quiet:true}); C.id = 'idle'; C.pri = 0; C.shownAt = now(); C.queue = null;
+}
+function scriptReset(){
+  if (!S.script) return;
+  S.script.i = 0; clearHistory(); $('heard').classList.remove('on'); scriptIdle(); syncScript();
+}
+function scriptShow(b){
+  showHeard(b.heard, SCRIPT.name); showLine(b.obs, b.sug);
+  C.id = 'script'; C.pri = 2; C.shownAt = now(); C.queue = null;
+}
+function scriptGo(step){
+  const D = S.script; if (!D) return;
+  const n = SCRIPT.beats.length;
+  if (step > 0){
+    if (D.i >= n){ toast('That was the last card. Stop recording when you’re ready.'); return; }
+    const b = SCRIPT.beats[D.i++]; scriptShow(b); logLine(b.obs, b.sug, SCRIPT.name);
+  } else {
+    if (D.i <= 0) return;
+    D.i--; LOG.shift(); renderFeed();
+    if (D.i === 0){ $('heard').classList.remove('on'); scriptIdle(); }
+    else { const b = SCRIPT.beats[D.i - 1]; showLine(b.obs, b.sug); C.id = 'script'; C.shownAt = now(); }
+    toast('Back one card.', 1200);
+  }
+  syncScript();
+}
+function setScript(on, quiet){
+  if (on){
+    if (S.mode !== 'live') return;
+    S.script = {i: 0};
+    stopWords(); $('heard').classList.remove('on');
+    S.people.forEach(p => { p.name = SCRIPT.name; }); renderPeople();
+    if (S.current) setPill('face', S.current.name);
+    if (!S.mic) toggleMic();
+    scriptReset();
+    if (!quiet) toast('Scripted demo on. Tap the screen after each of her lines.', 3500);
+  } else {
+    S.script = null; clearHistory(); scriptIdle(); syncScript();
+    startWords(); toast('Scripted demo off. Live nudges are back.');
+  }
+  syncScript();
+}
+// tap anywhere on the picture: next card. Press and hold: back one.
+function bindScriptTaps(){
+  const st = $('stage'); let hold = 0, down = false, lastGo = 0;
+  st.addEventListener('pointerdown', e => {
+    if (!S.script || S.mode !== 'live' || S.paused || !e.isPrimary) return;
+    down = true; clearTimeout(hold);
+    hold = setTimeout(() => { if (down){ down = false; scriptGo(-1); } }, 650);
+  });
+  const up = e => {
+    if (!down) return; down = false; clearTimeout(hold);
+    if (e.type !== 'pointerup') return;
+    const t = now(); if (t - lastGo < 350) return; lastGo = t;
+    scriptGo(1);
+  };
+  st.addEventListener('pointerup', up); st.addEventListener('pointercancel', up);
+  st.addEventListener('contextmenu', e => { if (S.script) e.preventDefault(); });
+}
+
 /* ---------------- Controls ---------------- */
 function syncCtx(){ $('ctxSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-checked', b.dataset.ctx === S.ctx)); }
 function syncMic(){ $('micSw').setAttribute('aria-checked', S.mic); $('micBtn').classList.toggle('off', !S.mic); store.set('mic', S.mic); }
@@ -1238,7 +1336,7 @@ let wl = null;
 async function wakeLock(){ try{ if ('wakeLock' in navigator && document.visibilityState === 'visible') wl = await navigator.wakeLock.request('screen'); }catch(e){} }
 
 /* ---------------- Version check ---------------- */
-const BUILD = '2026-11-16.0132';
+const BUILD = '2026-11-16.0229';
 async function checkVersion(){
   if (BUILD.startsWith('__') || !/^https?:/.test(location.protocol)) return;
   try{
@@ -1246,7 +1344,7 @@ async function checkVersion(){
     const v = (await r.json()).build; if (!v || v === BUILD) return;
     const key = 'nvg.reloaded.' + v;
     if (sessionStorage.getItem(key)) return;
-    if (S.mode === 'idle' && !REC.on){ sessionStorage.setItem(key, '1'); location.replace(location.pathname + '?v=' + encodeURIComponent(v) + location.hash); }
+    if (S.mode === 'idle' && !REC.on){ sessionStorage.setItem(key, '1'); const q = new URLSearchParams(location.search); q.set('v', v); location.replace(location.pathname + '?' + q + location.hash); }
     else toast('A newer Glass is ready. Close it and reopen to get it.', 5000);
   }catch(e){}
 }
@@ -1266,6 +1364,7 @@ function recType(){
 }
 function startRec(){
   if (S.mode === 'idle') return;
+  if (S.script) scriptReset();
   const type = recType(), cv = document.createElement('canvas');
   if (type === null || !cv.captureStream){ toast('This browser can’t record here. Use the iPhone’s Screen Recording in Control Center instead.', 5000); return; }
   cv.width = OUT_W; cv.height = OUT_H;
@@ -1469,7 +1568,10 @@ function init(){
   setClean(store.get('clean', true));
   syncMic(); syncWords(); syncClaude(); fitOverlay(); bindDrag();
   addEventListener('resize', fitOverlay);
-  $('startBtn').onclick = startLive;
+  $('startBtn').onclick = startLive; $('startBtn').textContent = startLabel();
+  bindScriptTaps(); syncScript();
+  $('scriptBtn').onclick = () => { $('more').hidden = true; setScript(!S.script); };
+  $('scriptRestart').onclick = () => { $('more').hidden = true; scriptReset(); toast('Script back at the top.'); };
   $('demoBtn').onclick = startDemo;
   $('cleanSw').onclick = () => setClean(!card.classList.contains('clean'));
   $('cleanSw2').onclick = () => setClean(!card.classList.contains('clean'));
@@ -1502,7 +1604,7 @@ function init(){
   $('passIn').addEventListener('change', () => { store.set('pass', $('passIn').value.trim()); CL.backoffUntil = 0; CL.status = ''; syncClaude(); });
   // Safari may only start listening from a tap, so the first tap starts it if it isn't running
   document.addEventListener('pointerdown', () => { const rv = $('reel'); if (S.demo && S.demo.reel && rv.muted){ rv.muted = false; rv.play().catch(() => { rv.muted = true; }); if (REC.reelAc) REC.reelAc.resume().catch(() => {}); } }, true);
-  document.addEventListener('pointerdown', () => { if (S.mode === 'live' && !S.paused && S.words && !WD.rec) { WD.blocked = false; startWords(); } }, true);
+  document.addEventListener('pointerdown', () => { if (S.mode === 'live' && !S.paused && S.words && !S.script && !WD.rec) { WD.blocked = false; startWords(); } }, true);
   setTimeout(() => { if (!new URLSearchParams(location.search).has('nopreload')) loadModels(); }, 400);
   const ios = /iPhone|iPad|iPod/.test(navigator.userAgent), standalone = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
   $('a2hs').hidden = !(ios && !standalone);
