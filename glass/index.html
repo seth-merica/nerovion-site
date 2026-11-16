@@ -45,10 +45,10 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--viola-soft
 #cam.mirror{transform:scaleX(-1)}
 #scene{display:block}
 #reel{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
-.dcap{position:absolute;left:max(16px,env(safe-area-inset-left,0px));top:calc(env(safe-area-inset-top,0px) + 58px);max-width:min(74vw,320px);z-index:4;pointer-events:none;text-shadow:0 1px 4px rgba(0,0,0,.9),0 0 18px rgba(0,0,0,.45)}
-.dcap .k{font-size:11px;font-weight:600;letter-spacing:.2em;line-height:1.4;color:rgba(255,255,255,.78)}
-.dcap .k b{color:#fff;font-weight:700}.dcap .k span{color:#e48ad4;font-weight:700}
-.dcap .d{margin-top:5px;font-size:15px;line-height:1.32;font-weight:500;color:#fff}
+.dcap{position:absolute;left:max(14px,env(safe-area-inset-left,0px));top:calc(env(safe-area-inset-top,0px) + 118px);max-width:min(78vw,330px);z-index:4;pointer-events:none;padding:12px 14px 13px;border-radius:14px;background:rgba(19,13,34,.75);border:.5px solid rgba(255,255,255,.14)}
+.dcap .k{font-size:12px;font-weight:600;letter-spacing:.2em;line-height:1.4;color:rgba(255,255,255,.82)}
+.dcap .k b{color:#fff;font-weight:700}.dcap .k span{color:#ef9be0;font-weight:700}
+.dcap .d{margin-top:6px;font-size:15px;line-height:1.35;font-weight:500;color:#fff}
 #overlay{pointer-events:none}
 #stage.drift{animation:drift 14s ease-in-out infinite alternate}
 @keyframes drift{from{transform:scale(1.02) translate(0,0)}to{transform:scale(1.06) translate(-1%,-.6%)}}
@@ -1041,13 +1041,14 @@ async function resumeLive(){
 }
 function endSession(){
   releaseMedia(); stopDemo();
-  S.paused = false; S.running = false; S.mode = 'idle'; forget(true);
+  S.paused = false; S.running = false; S.mode = 'idle'; forget(true); clearHistory();
   $('paused').hidden = true; $('more').hidden = true; $('rail').hidden = true; card.hidden = true; $('cam').hidden = true;
   $('startBtn').disabled = false; $('startBtn').textContent = 'Start camera'; $('camNote').hidden = true;
   $('start').hidden = false;
   toast('Session ended. Camera and microphone are off.');
 }
 async function startLive(){
+  clearHistory();
   $('startBtn').disabled = true; $('startBtn').textContent = 'Opening camera…';
   try{
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('nocam');
@@ -1075,13 +1076,14 @@ function enterApp(mode){
   $('flipBtn').hidden = mode !== 'live'; $('endRow').hidden = false; S.paused = false;
   $('modeLabel').textContent = mode === 'live' ? 'Live camera' : 'Demo';
   $('switchMode').textContent = mode === 'live' ? 'Show demo' : 'Use camera';
-  forget(true);
+  forget(true); clearHistory();
   cardPos = placeCard(cardPos);
   showLine('Looking for a face.', '', {quiet:true}); C.id = 'idle'; C.shownAt = now();
   setPill('none', 'Looking for a face');
   wakeLock();
   if (!S.running){ S.running = true; lastT = 0; loop(); }
 }
+function clearHistory(){ LOG.length = 0; renderFeed(); }
 function forget(silent){
   S.people = []; S.current = null; S.track = null; S.pending = null; S.noneShown = false; S.lastFaceAt = now();
   renderPeople(); if (!silent) toast('Everyone in this session is forgotten.');
@@ -1098,10 +1100,16 @@ const PLAN = [
   [58,'scene','p1'], [64,'say','That makes sense, what are the next steps'], [72.5,'cue','nod'], [81,'loop']
 ];
 // the reel: a short clip of someone talking, with cards timed to what she says (seconds into the clip)
-const REEL = {src:'demo/reel.mp4?v=2026-11-16.0110', lines:[
-  {end:1.6, say:'I just got back from Santa Monica.', obs:'She just got back from a trip.', sug:'How was Santa Monica?'},
-  {end:4.6, say:'The sunsets there were unreal.', obs:'She lit up talking about the sunsets.', sug:'What was your favorite spot?'},
-  {end:7.6, say:'I’d go back in a heartbeat.', obs:'She wants to go back.', sug:'When are you heading back?'}
+// the story runs on its own clock: a new nudge every EVERY seconds, all of them before any repeats
+const REEL = {src:'demo/reel.mp4?v=2026-11-16.0132', first:1.5, every:5.5, lines:[
+  {say:'I just got back from Santa Monica.', obs:'She just got back from a trip.', sug:'How was Santa Monica?'},
+  {say:'The sunsets there were unreal.', obs:'Big smile on the sunsets.', sug:'What was your favorite spot to watch them?'},
+  {say:'We walked the pier almost every night.', obs:'The pier was a highlight for her.', sug:'What was the best part of the pier?'},
+  {say:'The food was amazing, especially the tacos.', obs:'Food is a big part of this story.', sug:'Where were the best tacos?'},
+  {say:'Work has been nonstop since we got back.', obs:'Her energy dipped talking about work.', sug:'How are you settling back in?'},
+  {say:'I really needed that break.', obs:'The trip recharged her.', sug:'What helps you recharge at home?'},
+  {say:'We are already thinking about going back in the spring.', obs:'She is planning a return.', sug:'What would you do next time?'},
+  {say:'You should come with us next time.', obs:'She just invited you along.', sug:'I would love that. When are you thinking?'}
 ]};
 function startReel(){
   const v = $('reel');
@@ -1134,7 +1142,7 @@ async function startDemo(){
   enterApp('demo');
   $('cam').hidden = true;
   const v = $('reel'); v.hidden = false; $('dcap').hidden = false;
-  S.demo = {reel: true, step: 0, lastCt: 0};
+  S.demo = {reel: true, t0: 0, shown: -1};
   const D = S.demo;
   loadModels();
   if (await startReel()){
@@ -1173,19 +1181,14 @@ function drawCover(ctx, img, W, H, alpha){
 function reelTick(){
   const D = S.demo; if (!D || !D.reel || S.mode !== 'demo') return;
   requestAnimationFrame(reelTick);
-  const v = $('reel'), t = now(); if (!v.videoWidth) return;
-  const ct = v.currentTime;
-  if (ct + 0.5 < D.lastCt){
-    // the clip looped: start the story over
-    D.step = 0; $('heard').classList.remove('on');
-    showLine('Listening.', '', {quiet:true}); C.id = 'idle'; C.pri = 0; C.shownAt = t;
-  }
-  D.lastCt = ct;
-  while (D.step < REEL.lines.length && ct >= REEL.lines[D.step].end){
-    const L = REEL.lines[D.step++], who = S.current ? S.current.name : '';
-    showHeard(L.say, who); showLine(L.obs, L.sug); logLine(L.obs, L.sug, who);
-    C.id = 'reel'; C.pri = 2; C.shownAt = t; C.queue = null;
-  }
+  const t = now(); if (!D.t0) D.t0 = t;
+  const el = (t - D.t0)/1000 * SPEED - REEL.first; if (el < 0) return;
+  const n = Math.floor(el / REEL.every);
+  if (n === D.shown) return;
+  D.shown = n;
+  const L = REEL.lines[n % REEL.lines.length], who = S.current ? S.current.name : '';
+  showHeard(L.say, who); showLine(L.obs, L.sug); logLine(L.obs, L.sug, who);
+  C.id = 'reel'; C.pri = 2; C.shownAt = t; C.queue = null;
 }
 async function reelStep(D, t, dt){
   const v = $('reel');
@@ -1235,7 +1238,7 @@ let wl = null;
 async function wakeLock(){ try{ if ('wakeLock' in navigator && document.visibilityState === 'visible') wl = await navigator.wakeLock.request('screen'); }catch(e){} }
 
 /* ---------------- Version check ---------------- */
-const BUILD = '2026-11-16.0110';
+const BUILD = '2026-11-16.0132';
 async function checkVersion(){
   if (BUILD.startsWith('__') || !/^https?:/.test(location.protocol)) return;
   try{
@@ -1359,7 +1362,9 @@ function drawFrame(){
     // the caption stays in the top of the reel even when the frame is shifted to keep the card in view
     const cb = $('dcap').getBoundingClientRect();
     ctx.save(); ctx.setTransform(k, 0, 0, k, offX, Math.max(REC.offY, 96 - cb.top*k));
-    paintText(ctx, $('dcapK'), k, {shadow:true}); paintText(ctx, $('dcapD'), k, {shadow:true}); ctx.restore();
+    ctx.save(); rr(ctx, cb.left, cb.top, cb.width, cb.height, 14); ctx.fillStyle = 'rgba(19,13,34,.75)'; ctx.fill();
+    ctx.lineWidth = 0.5; ctx.strokeStyle = 'rgba(255,255,255,.14)'; ctx.stroke(); ctx.restore();
+    paintText(ctx, $('dcapK'), k); paintText(ctx, $('dcapD'), k); ctx.restore();
   }
   if (!card.hidden) drawCardTo(ctx, k);
 }
