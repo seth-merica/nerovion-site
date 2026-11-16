@@ -44,6 +44,11 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--viola-soft
 #cam{object-fit:cover;background:#000}
 #cam.mirror{transform:scaleX(-1)}
 #scene{display:block}
+#reel{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
+.dcap{position:absolute;left:max(16px,env(safe-area-inset-left,0px));top:calc(env(safe-area-inset-top,0px) + 58px);max-width:min(74vw,320px);z-index:4;pointer-events:none;text-shadow:0 1px 4px rgba(0,0,0,.9),0 0 18px rgba(0,0,0,.45)}
+.dcap .k{font-size:11px;font-weight:600;letter-spacing:.2em;line-height:1.4;color:rgba(255,255,255,.78)}
+.dcap .k b{color:#fff;font-weight:700}.dcap .k span{color:#e48ad4;font-weight:700}
+.dcap .d{margin-top:5px;font-size:15px;line-height:1.32;font-weight:500;color:#fff}
 #overlay{pointer-events:none}
 #stage.drift{animation:drift 14s ease-in-out infinite alternate}
 @keyframes drift{from{transform:scale(1.02) translate(0,0)}to{transform:scale(1.06) translate(-1%,-.6%)}}
@@ -189,6 +194,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--viola-soft
 <div id="app">
   <div id="stage">
     <video id="cam" playsinline muted autoplay hidden></video>
+    <video id="reel" playsinline muted loop preload="auto" hidden></video>
     <canvas id="scene" hidden></canvas>
     <canvas id="overlay"></canvas>
   </div>
@@ -204,6 +210,8 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--viola-soft
     <button class="ib" id="moreBtn" aria-label="Settings" title="Settings">
       <svg viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="18.5" cy="12" r="1.2"/></svg></button>
   </div>
+
+  <div class="dcap" id="dcap" hidden><div class="k" id="dcapK"><b>NERO</b><span>VION</span> GLASS DEMO</div><div class="d" id="dcapD">Glass hears what she says and reads her face, then suggests what to say next.</div></div>
 
   <section class="card clean" id="card" hidden aria-live="polite">
     <div class="chd" id="cardHead">
@@ -423,6 +431,7 @@ function renderFeed(){
 
 function cue(id, person, vars, force){
   const def = CUES[id]; if (!def) return;
+  if (S.demo && S.demo.reel && !force) return;
   const t = now();
   const p = person || S.current;
   const cdm = p ? p.cueAt : C.cueAt;
@@ -1088,11 +1097,55 @@ const PLAN = [
   [30.5,'scene','empty'], [36,'scene','p2'], [42,'say','I would need to run it by my partner first'], [51,'cue','tension'],
   [58,'scene','p1'], [64,'say','That makes sense, what are the next steps'], [72.5,'cue','nod'], [81,'loop']
 ];
+// the reel: a short clip of someone talking, with cards timed to what she says (seconds into the clip)
+const REEL = {src:'demo/reel.mp4', lines:[
+  {end:1.6, say:'I just got back from Santa Monica.', obs:'She just got back from a trip.', sug:'How was Santa Monica?'},
+  {end:4.6, say:'The sunsets there were unreal.', obs:'She lit up talking about the sunsets.', sug:'What was your favorite spot?'},
+  {end:7.6, say:'I’d go back in a heartbeat.', obs:'She wants to go back.', sug:'When are you heading back?'}
+]};
+function startReel(){
+  const v = $('reel');
+  return new Promise(res => {
+    let done = false; const fin = ok => { if (done) return; done = true; v.onerror = null; v.onloadeddata = null; clearTimeout(to); res(ok); };
+    const to = setTimeout(() => fin(v.readyState >= 2), 6000);
+    v.onerror = () => fin(false); v.onloadeddata = () => fin(true);
+    if (!v.src) v.src = REEL.src;
+    v.currentTime = 0;
+    // sound on when a tap started the demo; muted if the phone says no
+    v.muted = false;
+    const pl = v.play(); if (pl) pl.catch(() => { v.muted = true; v.play().catch(() => {}); });
+    reelAudio(v);
+  });
+}
+function reelAudio(v){
+  // routes the clip's sound into recordings as well as the speaker
+  if (REC.reelDest || !window.AudioContext && !window.webkitAudioContext) return;
+  try{
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const src = ac.createMediaElementSource(v), dest = ac.createMediaStreamDestination();
+    src.connect(ac.destination); src.connect(dest);
+    REC.reelAc = ac; REC.reelDest = dest;
+  }catch(e){}
+  if (REC.reelAc && REC.reelAc.state !== 'running') REC.reelAc.resume().catch(() => {});
+}
 const imgCache = {}, imgReady = {};
 function loadImg(src){ return imgCache[src] || (imgCache[src] = new Promise((res, rej) => { const i = new Image(); i.onload = () => { imgReady[src] = i; res(i); }; i.onerror = rej; i.src = src; })); }
 async function startDemo(){
   enterApp('demo');
-  const sc = $('scene'); sc.hidden = false; $('cam').hidden = true; $('stage').classList.add('drift');
+  $('cam').hidden = true;
+  const v = $('reel'); v.hidden = false; $('dcap').hidden = false;
+  S.demo = {reel: true, step: 0, lastCt: 0};
+  const D = S.demo;
+  loadModels();
+  if (await startReel()){
+    if (S.demo !== D) return;
+    showLine('Listening.', '', {quiet:true}); C.id = 'idle'; C.shownAt = now();
+    requestAnimationFrame(reelTick);
+    return;
+  }
+  if (S.demo !== D) return;
+  v.pause(); v.hidden = true; $('dcap').hidden = true;
+  const sc = $('scene'); sc.hidden = false; $('stage').classList.add('drift');
   S.demo = {t0: now(), step: 0, scene: null, from: null, fadeAt: 0, src: document.createElement('canvas'), simPerson: {}};
   await Promise.all(Object.values(SCENES).map(loadImg)).catch(() => {});
   requestAnimationFrame(renderDemo);
@@ -1111,13 +1164,36 @@ function renderDemo(){
   else if (D.drawn !== D.scene || fade < 1 || D.dirty){ drawCover(ctx, img, W, H, 1); D.drawn = fade >= 1 ? D.scene : null; D.dirty = false; }
 }
 addEventListener('resize', () => { if (S.demo) S.demo.dirty = true; });
-function stopDemo(){ S.demo = null; $('scene').hidden = true; $('stage').classList.remove('drift'); }
+function stopDemo(){ S.demo = null; $('scene').hidden = true; $('stage').classList.remove('drift'); const v = $('reel'); if (v){ v.pause(); v.hidden = true; } $('dcap').hidden = true; }
 function drawCover(ctx, img, W, H, alpha){
   const k = Math.max(W/img.width, H/img.height), w = img.width*k, h = img.height*k;
   ctx.globalAlpha = alpha; ctx.drawImage(img, (W-w)/2, (H-h)/2, w, h); ctx.globalAlpha = 1;
 }
+// the script runs on its own clock, so face reading never delays a card
+function reelTick(){
+  const D = S.demo; if (!D || !D.reel || S.mode !== 'demo') return;
+  requestAnimationFrame(reelTick);
+  const v = $('reel'), t = now(); if (!v.videoWidth) return;
+  const ct = v.currentTime;
+  if (ct + 0.5 < D.lastCt){
+    // the clip looped: start the story over
+    D.step = 0; $('heard').classList.remove('on');
+    showLine('Listening.', '', {quiet:true}); C.id = 'idle'; C.pri = 0; C.shownAt = t;
+  }
+  D.lastCt = ct;
+  while (D.step < REEL.lines.length && ct >= REEL.lines[D.step].end){
+    const L = REEL.lines[D.step++], who = S.current ? S.current.name : '';
+    showHeard(L.say, who); showLine(L.obs, L.sug); logLine(L.obs, L.sug, who);
+    C.id = 'reel'; C.pri = 2; C.shownAt = t; C.queue = null;
+  }
+}
+async function reelStep(D, t, dt){
+  const v = $('reel');
+  if (S.models && v.videoWidth && !v.paused) await analyze(v, v.videoWidth, v.videoHeight, t, dt, false);
+}
 async function demoStep(t, dt){
   const D = S.demo; if (!D) return;
+  if (D.reel) return reelStep(D, t, dt);
   const el = (t - D.t0)/1000 * SPEED;
   while (D.step < PLAN.length && el >= PLAN[D.step][0]){
     const [, kind, arg] = PLAN[D.step++];
@@ -1159,7 +1235,7 @@ let wl = null;
 async function wakeLock(){ try{ if ('wakeLock' in navigator && document.visibilityState === 'visible') wl = await navigator.wakeLock.request('screen'); }catch(e){} }
 
 /* ---------------- Version check ---------------- */
-const BUILD = '2026-11-15.1233';
+const BUILD = '2026-11-16.0104';
 async function checkVersion(){
   if (BUILD.startsWith('__') || !/^https?:/.test(location.protocol)) return;
   try{
@@ -1193,7 +1269,8 @@ function startRec(){
   REC.cv = cv; REC.ctx = cv.getContext('2d'); REC.offY = null;
   drawFrame();
   const out = cv.captureStream(30);
-  const a = S.stream && S.stream.getAudioTracks().find(t => t.readyState === 'live');
+  let a = S.stream && S.stream.getAudioTracks().find(t => t.readyState === 'live');
+  if (!a && S.demo && S.demo.reel && REC.reelDest && !$('reel').muted) a = REC.reelDest.stream.getAudioTracks()[0];
   if (a) out.addTrack(a);
   let mr;
   try{ mr = new MediaRecorder(out, Object.assign({videoBitsPerSecond: 8000000, audioBitsPerSecond: 128000}, type ? {mimeType: type} : {})); }
@@ -1270,11 +1347,20 @@ function drawFrame(){
     ctx.save();
     if (v.classList.contains('mirror')){ ctx.translate(W, 0); ctx.scale(-1, 1); }
     ctx.drawImage(v, (W-w)/2, (H-h)/2, w, h); ctx.restore();
+  } else if (S.mode === 'demo' && !$('reel').hidden && $('reel').videoWidth){
+    const rv = $('reel'), s = Math.max(W/rv.videoWidth, H/rv.videoHeight), w = rv.videoWidth*s, h = rv.videoHeight*s;
+    ctx.drawImage(rv, (W-w)/2, (H-h)/2, w, h);
   } else if (S.mode === 'demo' && !$('scene').hidden){
     ctx.drawImage($('scene'), 0, 0, W, H);
   }
   // face marks
   ctx.drawImage(ov, 0, 0, W, H);
+  if (!$('dcap').hidden){
+    // the caption stays in the top of the reel even when the frame is shifted to keep the card in view
+    const cb = $('dcap').getBoundingClientRect();
+    ctx.save(); ctx.setTransform(k, 0, 0, k, offX, Math.max(REC.offY, 96 - cb.top*k));
+    paintText(ctx, $('dcapK'), k, {shadow:true}); paintText(ctx, $('dcapD'), k, {shadow:true}); ctx.restore();
+  }
   if (!card.hidden) drawCardTo(ctx, k);
 }
 
@@ -1392,7 +1478,7 @@ function init(){
   $('switchMode').onclick = () => { $('more').hidden = true; if (S.mode === 'live'){ releaseMedia(); S.paused = false; $('paused').hidden = true; $('cam').hidden = true; startDemo(); } else { $('start').hidden = true; startLive(); } };
   // leaving the app releases the camera and microphone; coming back waits for a tap on Resume
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible'){ if (S.mode !== 'live') wakeLock(); checkVersion(); }
+    if (document.visibilityState === 'visible'){ if (S.mode !== 'live') wakeLock(); checkVersion(); if (S.demo && S.demo.reel) $('reel').play().catch(() => {}); }
     else { if (S.mode === 'live') pauseLive(); else releaseMedia(); }
   });
   addEventListener('pagehide', () => { if (S.mode === 'live') pauseLive(); releaseMedia(); S.people = []; });
@@ -1410,6 +1496,7 @@ function init(){
   $('passIn').value = store.get('pass', '');
   $('passIn').addEventListener('change', () => { store.set('pass', $('passIn').value.trim()); CL.backoffUntil = 0; CL.status = ''; syncClaude(); });
   // Safari may only start listening from a tap, so the first tap starts it if it isn't running
+  document.addEventListener('pointerdown', () => { const rv = $('reel'); if (S.demo && S.demo.reel && rv.muted){ rv.muted = false; rv.play().catch(() => { rv.muted = true; }); if (REC.reelAc) REC.reelAc.resume().catch(() => {}); } }, true);
   document.addEventListener('pointerdown', () => { if (S.mode === 'live' && !S.paused && S.words && !WD.rec) { WD.blocked = false; startWords(); } }, true);
   setTimeout(() => { if (!new URLSearchParams(location.search).has('nopreload')) loadModels(); }, 400);
   const ios = /iPhone|iPad|iPod/.test(navigator.userAgent), standalone = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
